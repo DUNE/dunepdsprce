@@ -1,3 +1,6 @@
+# Ignore installation directory
+install/
+
 # Prerequisites
 *.d
 
