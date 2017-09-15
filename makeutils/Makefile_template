@@ -1,0 +1,310 @@
+# -*-Mode: makefile;-*-
+
+
+# ======================================================================
+#
+# PURPOSE
+# -------
+# Template for a package Makefile. 
+#
+#
+# <<<
+#
+# This is not intended to be a user manual, somewhere between philosophy
+# and quick reminder.
+#
+# a) Text between <> is a place-holder for user specific information
+# b) Test between <<< and >>> is informational only and can be
+#    and likely should b removed 
+#
+#
+# GOALS
+# -----
+# 1. Stick to the straight make utility.
+# 2. Reduce the user's work, as much as possible, to specifying lists
+#    of various strings.
+# 3. Support multiple target platforms (these are the 'TARGET')
+# 4. Support building of multiple products, called constituents
+# 5. To 'decentralize' as much as possible. That is, except for including
+#    the utilities found in the makeutils subdirectory, the user just
+#    types make or gmake using all the standard make command line syntax
+#    and options
+# 6. Not to do 'too much' for the user.  Most options, no matter how
+#    common, are 'opt-in' by the user.  For example, while including
+#    the package's public include directory as one of the include paths
+#    is quite common, it is an opt-in, i.e. you don't get it for 'free'
+# 7. Allow 'mixing' and 'matching' of packages and their instances.
+#
+# While the goal was to try to make this as 'policy-free' as possible,
+# without an policy or conventions, what is left is bare make. Said
+# another way, any attempt to add value involves some policy and 
+# conventions. The next sections describe these policies and conventions
+#
+# SOURCE DIRECTORY TREE
+# 1. The make files are oriented around the common notion of a 'package'
+# 2. The topology of the directory structure of a package is
+#
+#   <package-name>/<instance>/source/make
+#                                   <language>/<package-name>
+#                                             /src
+#
+# <instance>/
+#  This allows different incarnations of the package to simoultaneously
+#  exist and facilitates the use of a symbolic link to select the one
+#  of interest. While the name may be anything, typically the instance
+#  would be one of
+#      user - This is the user's private sandbox
+#       dev - This is a beta release for other developer's to work wiht
+#      prod - This is the current production version
+#     <tag> - A specific tagged version (in the repository sense
+# 
+# make/
+#  The make subdirectory contains the packages make file and whatever else
+#  the package might use to build the package
+#
+# <language>/
+#  This is the language of the source files. Examples would be 
+#      cc/       -- C and C++ source code
+#      python/
+#      etc
+#
+# cc/<package-name>
+#  Contains the public include files. The natural name here would be 
+#  something like 'inc' or 'include', but by making this the name of 
+#  the package, the include directive is more descriptive.
+#
+#     # include <package-name>/x.hh
+#
+# cc/src
+# Contains the C and C++ source files.
+#
+#
+# PRODUCT DIRECTORIES
+# -------------------
+# There are 4 primary product directory trees. These are directed at
+# 3 different classes of user's of this package.  
+#
+#    binary/     USER: INTERNAL
+#    This is an internal directory private to the package. It contains
+#    intermediary products like dependency and object files created and
+#    used when building.
+#
+# 
+#    export/    USER: INTERNAL
+#    These are the files meant for export, but containing the target
+#    (e.g. x86_64, arm) products.
+#
+#    build/     USER: INTERNALE and EXTERNAL user's needing this package
+#    This inverts the package tree, placing the target directory at the top
+#    level.  The result is a directory structure mimicing the famaliar
+#        /usr/include
+#        /usr/bin
+#        /usr/lib
+#
+#    /include
+#    The package structure is preserved in the include directory, so it
+#    looks like
+#        /usr/include/<package-name>
+#    Inverting the directory tree allows user's to specify a simple
+#      -I <root-stem>/build//x86_64/include
+#    to access all the public includes
+#
+#    Note that the include files in here are actually symbolic links
+#    back to the package's source tree. This is in keeping with the
+#    idea that this is for use by code developer.
+#
+#    bin/
+#    lib/
+#    The package directory structure is flattened in the bin/ and lib
+#    directories, following the /usr/bin and usr/lib structures. This
+#    allows a simple
+#        <root-stem>/build/x86_64/bin and
+#        <root-stem>/build/x86_64/lib
+#
+#    to be added to PATH and LD_LIBRARY_PATH
+#
+#    The downside is that all exported executables and libraries most
+#    have unique names across all the packages that populate these
+#    directories.  
+#    
+#    Note that, as with the include files, the files populating these
+#    directories are also symbolic links back to the package's export
+#    directory.  Again, this is in keeping with the idea that this
+#    is a developer's playground.  This structure allows the 'mixing'
+#    and 'matching' of various versions.
+#
+#    install/    USER: CONSUMER
+#    The directory structure and files within them are exactly as in
+#    the build/ tree. The difference is that these files are no longer
+#    symbolic links, but copies of the actual files. This reflects the
+#    fact that user's at the consumer level are no longer interested
+#    in 'mixing' and 'matching', preferring the stability.
+#
+#  PRODUCT TYPES
+#  -------------
+#  Relocatable objects 
+#  These are partially linked object files. They are meant only for
+#  internal use and provided as a convenient way to group objects
+#  together for potential use in multiple constituents. These are
+#  non-position independent, but can easily made so my specifying
+#  -fPIC as a LDFLAGS option
+#
+#  Shareable libraries
+#  These are shareable libraries following the conventions of UNIX
+#  shareables.  They are fully versioned and assigned an SO name
+#  of the major version although this can be overriden.
+#
+#  Executables
+#  Traditional executables
+#
+#  What's missing and could be added?
+#  1. Archive libraries
+#  2. Position independent relocatable objects (with modifying LDFLAGS)
+#  3. Shareable interface defintion. These are called (for
+#  reasons I cannot fathom) .map files and provide fine grain definition
+#  and versioning of the shareable interface.  These prevent consumers
+#  from activating a shareable that is incompatiable with the initial
+#  link.
+#
+# >>>
+#
+# ======================================================================
+
+
+
+# ======================================================================
+#
+# HISTORY
+# -------
+#
+#     DATE   WHO WHAT
+# ---------- --- ----------------------------------------------------------- 
+# 2016.05.06 jjr Created
+#
+# ======================================================================
+
+
+
+
+
+# ======================================================================
+# BOILERPLATE
+# -----------------------------------------------------------
+# Extract the project root from the make file stem
+# This assumes the directory structure is
+#
+#    <prj-stem>/source/<branch>/<package-name>/make/Makefile
+# -----------------------------------------------------------
+MAKEUTILS_DIR := $(shell                                                          \
+                   cd $(dir $(word 1, $(MAKEFILE_LIST)))../../../../../makeutils; \
+                   pwd)
+include $(MAKEUTILS_DIR)/prologue.mk
+
+
+# --------------------------
+#    Check if should process
+# --------------------------
+ifdef CONTINUE
+# ======================================================================
+
+
+
+
+# ======================================================================
+# --- USER DEFINED STUFF
+# ----------------------------------------------------------------------
+
+
+# -----------------------------------
+#   Project name, informational only
+# -----------------------------------
+PRJNAME  := <Project-Name>
+# -----------------------------------
+
+
+# -----------------------------------------------
+#   Global include path
+#   This path will be used for every compilation
+#   While a common thing to do, it is up to the
+#   user to 'opt-in'
+# -----------------------------------------------
+INCLUDES := $(INCLUDE_DIR)
+# -----------------------------------------------
+
+
+# ------------------------
+# -- ARM only constituents
+# ------------------------
+ifeq ($(TARGET), arm_CA9-linux)
+   # -- None
+endif
+# ------------------------
+
+
+
+# ---------------------------
+# -- x86_64 only constituents
+# ---------------------------
+ifeq ($(TARGET),x86_64-linux)
+
+   # ---------------------------------------------------------
+   # EXECUTABLE: exe1
+   # ------------------------
+   exe1_SRCDIR               := $(PKG_SRCDIR)   -- This is the default
+   exe1_CCSRCFILES           := e1.cc \
+                                e2.cc
+   exe1_CSRCRFILES           :  e3.c
+
+   exe1_LDFLAGS              := <additional LDFLAGS, e.g. -lpthread -lrt>
+   exe1_ALIAS                := <alias-make-target, e.g. exe1)tcp_receiver
+
+   EXECUTABLES               += exe1
+   # ---------------------------------------------------------
+
+endif
+# ------------------------
+
+
+# ------------------------
+# -- Common to all targets
+# ------------------------
+
+
+# ---------------------------------------------------------
+# RELOCATABLE: r01
+# -----------------------
+ro1__CCSRCFILES := r1.cc \
+                   r2.cc \
+                   f3.cc
+
+ro1_ALIAS       := r01
+RELOCATABLES    += r01
+# ---------------------------------------------------------
+
+
+
+
+# ---------------------------------------------------------
+# SHAREABLE: so1
+# ----------------
+so1_CCSRCFILES            := s1.cc \
+                             s2.cc
+
+so1_ALIAS                 := s01
+so1_VERSION               := 1.2.3
+SHAREABLES                += s01
+# ---------------------------------------------------------
+
+
+#
+#
+# ====================================================================== *
+
+
+
+# ======================================================================
+# BOILERPLATE
+# ---------------------------------------------------------------------
+include $(MAKEUTILS_DIR)/epilogue.mk
+# ======================================================================
+endif

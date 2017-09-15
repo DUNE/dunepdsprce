@@ -1,5 +1,11 @@
 # Ignore installation directory
 install/
+export/
+binary/
+
+# Temporay saved files
+*.*-sav
+
 
 # Prerequisites
 *.d
