@@ -345,7 +345,7 @@ ifeq ($(filter $(MAKECMDGOALS),clean),clean)
 endif
 
 clean:
-	@echo "Start clean of package ............ $(PKG_NAME) - $(TARGET)"
+	@echo -e "Start clean of package ........... $(PKG_NAME) - $(TARGET)"
 	@echo -e "    Clean files in binary dep dir.. $(pkg_depdirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_depdirs))
 	@@echo -e "    Clean files in binary obj dir.. $(pkg_objdirs_list)"
@@ -360,7 +360,7 @@ clean:
 	@rm -rf $(files_lib)
 	@@echo -e "    Clean files in build  bin dir.. $(call buildlist,$(call pkg_blddir,$(files_bin)))"
 	@rm -rf $(file_bin)
-	@echo "End   clean of project ........... $(PKG_NAME) - $(TARGET)"
+	@echo  -e "End   clean of project ........... $(PKG_NAME) - $(TARGET)\n"
 # ------------------------------------------------------------
 
 
@@ -399,7 +399,6 @@ else
 # for a specific pconstituent's products.
 #
 # ----------------------------------------------------------------------
-
 DBG_DEP_ASM  := $(if $(strip $(dep_asm)  $(dep)  $(dbg)),,@)
 DBG_DEP_C    := $(if $(strip $(dep_asm)  $(dep)  $(dbg)),,@)
 DBG_DEP_CC   := $(if $(strip $(dep_asm)  $(dep)  $(dbg)),,@)
@@ -611,8 +610,7 @@ PKG_BLD_INCS := $(patsubst $(PKG_INCDIR)/$(PKG_NAME)/%, \
 PKG_BLD_INCS := $(filter-out $(wildcard $(PKG_BLD_INCS)),$(PKG_BLD_INCS))
 #$(info PKG_BLD_INCS(new) = $(PKG_BLD_INCS))
 # ------------------------------------------------------------
-
-
+#$(info PKG_BLD_INCDIR = $(PKG_BLD_INCDIR))
 $(PKG_BLD_INCDIR)/target : $(PKG_INCDIR)/$(PKG_NAME)//target/$(TARGET)
 	@echo "    Create build inc dir link. $(call includefile, $@)"
 	@ln -sT $^ $@
@@ -1522,7 +1520,7 @@ $(foreach s,$(SHAREABLES),$(eval $(call ALIAS_SO_template,$s)))
 
 
 
-print_goals       := print_flags           \
+print_list_goals    := print_flags           \
                      print_dependencyfiles \
                      print_objectfiles     \
                      print_directories     \
@@ -1535,7 +1533,7 @@ make_build_goals := make_build_rootdir     \
                     make_build_includes 
 
 
-nondependency_goals := $(print_goals) $(make_build_goals)
+nondependency_goals := $(print_list_goals) $(make_build_goals)
 dependency_goals    := $(filter-out $(nondependency_goals), $(MAKECMDGOALS))
 #$(info nondependency_goals = $(nondependency_goals))
 #$(info MAKECMDGOALS        = $(MAKECMDGOALS))
@@ -1551,8 +1549,8 @@ endif
 .PHONY: all 
 .PHONY: make_directories
 .PHONY: $(make_build_goals)
-.PHONY: $(print_goals)
-.PHONE: depend
+.PHONY: $(print_list_goals)
+.PHONE: depend includes
 
 
 all:                             \
@@ -1570,7 +1568,7 @@ all:                             \
 
 
 
-depend:                         \
+includes depend:                \
 	print_start_of_build    \
 	make_directories        \
 	make_build_includes     \
@@ -1707,14 +1705,16 @@ print_directories:
                "\n"
 
 print_end_of_build:
-	@echo  "End   build of package........ $(PRJNAME) - $(TARGET)" 
+	@echo  -e "End   build of package........ $(PRJNAME) - $(TARGET)\n" 
 
 
 print_flags:
+	@echo "Begin print goals for ......... $(PRJNAME) - $(TARGET)"
 	@echo "CFLAGS  : $(CFLAGS)"
 	@echo "CXXFLAGS: $(CXXFLAGS)"
 	@echo "LDFLAGS : $(LDFLAGS)"
 	@echo "INCLUDES: $(INCLUDES)"
+	@echo  -e "End  print goals for ......... $(PRJNAME) - $(TARGET)\n"
 
 print_tools:
 	@echo -e                             \

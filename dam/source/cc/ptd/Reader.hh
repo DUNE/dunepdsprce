@@ -22,6 +22,20 @@
 \* ---------------------------------------------------------------------- */
 
 
+/* ---------------------------------------------------------------------- *\
+   
+   HISTORY
+   -------
+  
+   DATE       WHO WHAT
+   ---------- --- ---------------------------------------------------------
+   2017.10.05 jjr Added in data reader to ensure all the data gets read.
+   2017.07.27 jjr Created
+  
+\* ---------------------------------------------------------------------- */
+
+
+
 #include "dam/HeaderFragmentUnpack.hh"
 
 #include <cstdio>
@@ -172,17 +186,40 @@ inline ssize_t Reader::read (HeaderFragmentUnpack *header)
 inline ssize_t Reader::read (uint64_t *data, int n64, ssize_t nbytes)
 {
    unsigned toRead = n64 * sizeof (uint64_t ) - nbytes;
-   nbytes = ::read (m_fd, data + nbytes/sizeof (*data), toRead);
-   
-   if (nbytes != toRead)
-   {
-      fprintf (stderr, 
-               "Error: reading data\n"
-               "       returned %d bytes, should have returned %d errno = %d\n",
-               (int)nbytes, toRead, errno);
-   }
+   unsigned left   = toRead;
 
-   return nbytes;
+   uint8_t *buf =  reinterpret_cast<decltype (buf)>(data)  + nbytes;
+   while (1)
+   {
+      nbytes = ::read (m_fd, buf, left);
+   
+      if (nbytes != left)
+      {
+         // Done or error
+         if (nbytes <= 0)
+         {
+            if (nbytes < 0)
+            {
+               fprintf (stderr, 
+                        "Error: reading data\n"
+                        "       returned %d bytes, should have returned %d errno = %d\n",
+                        (int)nbytes, toRead, errno);
+            }
+
+            return nbytes;
+         }
+
+         printf ("Read again left = %u\n", left);
+
+         // More to read
+         left -= nbytes;
+         data += nbytes;
+      }
+      else 
+      {
+         return toRead;
+      }
+   }
 }
 /* ---------------------------------------------------------------------- */
 

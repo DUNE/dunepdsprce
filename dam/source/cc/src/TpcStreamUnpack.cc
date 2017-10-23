@@ -26,12 +26,31 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.10.05 jjr Corrected error in getTrimmed which resulted in 1024
+                  frames than it should have.
+
+                  Eliminated printf debug statements.
+
+   2017.10.04 jjr Changed the vector signatures from std::vector<uint16_t>
+                  to TpcAdcVector.  
+
+                  Eliminated Identifier::getChannelndex.
+
+                  Eliminated the nticks parameter from 
+                  getMultiChannelData(uint16_t *adcs) const
+
+
    2017.08.29 jjr Created
   
 \* ---------------------------------------------------------------------- */
 
+
 #include "dam/TpcStreamUnpack.hh"
-#include "dam/TpcRecords.hh"
+#include "dam/access/WibFrame.hh"
+#include "TpcStream-Impl.hh"
+#include "TpcRanges-Impl.hh"
+#include "TpcToc-Impl.hh"
+#include "TpcPacket-Impl.hh"
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -59,28 +78,16 @@ size_t TpcStreamUnpack::getNChannels() const
 /* ---------------------------------------------------------------------- */
 size_t TpcStreamUnpack::getNTicksUntrimmed () const
 {
-   pdd::fragment::Toc const *toc = m_rawStream.getToc ();
-   int                     ndscs = toc->getNDscs      ();
+   using namespace pdd;
+   using namespace pdd::access;
+   record::TpcToc       const *toc = m_stream.getToc ();
+   record::TpcTocHeader const *hdr = access::TpcToc      ::getHeader      (toc);
+   int                       ndscs = access::TpcTocHeader::getNPacketDscs (hdr);
 
    return 1024*ndscs;
 }
 /* ---------------------------------------------------------------------- */   
 
-
-
-/* ---------------------------------------------------------------------- */
-static pdd::fragment::RangesBody::Descriptor::Indices const 
-         *locateIndices (pdd::access::TpcStream const *tpc) 
-{
-   using namespace pdd::fragment;
-   Ranges                          const *rng = tpc->getRanges     ();
-   RangesBody                      const *bdy = rng->getBody       ();
-   RangesBody::Descriptor          const *dsc = bdy->getDescriptor ();
-   RangesBody::Descriptor::Indices const *ind = dsc->getIndices    ();
-
-   return ind;
-}
-/* ---------------------------------------------------------------------- */
 
 
 
@@ -93,16 +100,23 @@ static pdd::fragment::RangesBody::Descriptor::Indices const
 /* ---------------------------------------------------------------------- */
 size_t TpcStreamUnpack::getNTicks () const
 {
-   auto indices = locateIndices (&m_rawStream);
+   using namespace pdd;
+   using namespace pdd::access;
 
-   uint32_t beg = indices->getBegin ();
-   uint32_t end = indices->getEnd   ();
+   pdd::access::TpcStream const &stream = getStream ();
+   pdd::record::TpcRanges const *ranges = stream.getRanges ();
+   unsigned int                  bridge = TpcRanges::getBridge  (ranges);
+   pdd::access::TpcRangesIndices indices (TpcRanges::getIndices (ranges), 
+                                                                 bridge);
 
-   int   begPkt = indices->getPacket (beg);
-   int   begOff = indices->getOffset (beg);
+   uint32_t beg = indices.getBegin ();
+   uint32_t end = indices.getEnd   ();
 
-   int   endPkt = indices->getPacket (end);
-   int   endOff = indices->getOffset (end);
+   int   begPkt = indices.getPacket (beg);
+   int   begOff = indices.getOffset (beg);
+
+   int   endPkt = indices.getPacket (end);
+   int   endOff = indices.getOffset (end);
 
    size_t nticks = (endPkt - begPkt) * 1024
                  -  begOff + endOff;
@@ -127,8 +141,8 @@ size_t TpcStreamUnpack::getNTicks () const
 /* ---------------------------------------------------------------------- */
 TpcStreamUnpack::Identifier TpcStreamUnpack::getIdentifier  () const
 {
-   pdd::fragment::TpcStream  const *rawStream = m_rawStream.getRecord ();
-   uint32_t csf = rawStream->getCsf ();
+   pdd::record::TpcStreamHeader  const *hdr = m_stream.getHeader ();
+   uint32_t csf = hdr->getCsf ();
 
    return TpcStreamUnpack::Identifier (csf);
 }
@@ -181,30 +195,15 @@ uint32_t TpcStreamUnpack::Identifier::getFiber () const
 
 
 
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief  Extracts the WIB's channel number from the identifier
-  \return The WIB's fiber number
-                                                                          */
 /* ---------------------------------------------------------------------- */
-uint32_t TpcStreamUnpack::Identifier::getChannelIndex () const
+void transpose (uint16_t                       *const  adcs[128], 
+                int                                     npktDscs,
+                pdd::record::TpcTocPacketDsc const      *pktDscs,
+                pdd::record::TpcPacketBody   const         *pkts,
+                int                                       iticks,
+                int                                       nticks) 
 {
-   uint32_t channel = m_w32 & 0xffff;
-   return   channel;
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- */
-void transpose (uint16_t                                *adcs[128], 
-                int                                       npktDscs,
-                pdd::fragment::TocBody::PacketDsc   const *pktDscs,
-                pdd::fragment::TpcPacketBody const           *pkts,
-                int                                         iticks,
-                int                                         nticks) 
-{
-   using namespace pdd::fragment;
+   using namespace pdd::access;
 
    // ---------------------------------------------------------
    // !!! WARNING !!!
@@ -213,15 +212,15 @@ void transpose (uint16_t                                *adcs[128],
    // follow consecutively, not using the packet descriptors to 
    // locate the data packets
    // ---------------------------------------------------------
-   int      o64 = pktDscs[0].getOffset64 ();
-
+   int                o64 = TpcTocPacketDsc::getOffset64 (pktDscs);
    uint64_t const    *ptr = reinterpret_cast<decltype(ptr)>(pkts) + o64;
-   WibFrame const *frames = reinterpret_cast<decltype(frames)>(ptr) + iticks;
-   WibFrame::transposeAdcs128x32N (adcs, 0, frames, nticks);
+   pdd::access::WibFrame const *frames = reinterpret_cast<decltype(frames)>(ptr) + iticks;
+   pdd::access::WibFrame::transposeAdcs128xN (adcs, 0, frames, nticks);
 
    return;
 }
 /* ---------------------------------------------------------------------- */
+
 
 
 /* ---------------------------------------------------------------------- *//*!
@@ -249,13 +248,15 @@ static bool getMultiChannelDataBase (uint16_t                    *adcs,
                                      int                         itick,
                                      int                        nticks)
 {
-   using namespace pdd::fragment;
-   Toc               const      *toc = tpc->getToc            ();
-   TocBody           const  *tocBody = toc->getBody           ();
-   TpcPacket          const  *pktRec = tpc->getPacket         ();
-   int                         npkts = toc->getNDscs          ();
-   TpcPacketBody      const    *pkts = pktRec->getBody        ();
-   TocBody::PacketDsc const *pktDscs = tocBody->getPacketDscs ();
+   using namespace pdd;
+   using namespace pdd::access;
+   record::TpcToc          const     *toc = tpc->getToc            ();
+   record::TpcTocBody      const *tocBody = TpcToc::getBody        (toc);
+   record::TpcTocHeader    const  *tocHdr = TpcToc::getHeader      (toc);
+   record::TpcPacket       const  *pktRec = tpc->getPacket         ();
+   int                              npkts = TpcTocHeader::getNPacketDscs (tocHdr);
+   record::TpcPacketBody   const    *pkts = TpcPacket::getBody           (pktRec);
+   record::TpcTocPacketDsc const *pktDscs = TpcTocBody::getPacketDscs    (tocBody);
 
 
    
@@ -265,16 +266,15 @@ static bool getMultiChannelDataBase (uint16_t                    *adcs,
    // contributors are stored contigously.
    // ---------------------------------------------------------
    int  nframes = 1024 * npkts;
-   auto  pktDsc = *pktDscs;
-   int      o64 = pktDsc.getOffset64 ();
+   int      o64 = TpcTocPacketDsc::getOffset64 (pktDscs);
       
-   uint64_t const *ptr    = reinterpret_cast<decltype(ptr)   >(pkts) + o64;
-   WibFrame const *frames = reinterpret_cast<decltype(frames)>(ptr) + itick;
+   uint64_t const              *ptr    = reinterpret_cast<decltype(ptr)   >(pkts) + o64;
+   pdd::access::WibFrame const *frames = reinterpret_cast<decltype(frames)>(ptr) + itick;
 
    int mticks = (nticks < 0) ? nframes : nticks;
 
 
-   printf ("Transposing nticks = %d mticks = %d itick = %d\n", nticks, mticks, itick);
+   ///printf ("Transposing nticks = %d mticks = %d itick = %d\n", nticks, mticks, itick);
 
    // -----------------------------------------------
    // Limit the number of frames to what is available
@@ -283,11 +283,10 @@ static bool getMultiChannelDataBase (uint16_t                    *adcs,
    int over     = maxFrame - nframes;
    nframes      = over > 0 ? mticks - over : mticks;
 
-   printf ("Transposing nframes = %d\n", nframes);
+   ///printf ("Transposing nframes = %d\n", nframes);
 
-   WibFrame::transposeAdcs128x32N (adcs, nticks, frames, nframes);
+   pdd::access::WibFrame::transposeAdcs128xN (adcs, nticks, frames, nframes);
    adcs += 128 * nticks;
-
 
    return true;
 }
@@ -315,20 +314,21 @@ static bool getMultiChannelDataBase (uint16_t                    *adcs,
                           value.
                                                                           */
 /* ---------------------------------------------------------------------- */
-static bool getMultiChannelDataBase (uint16_t                   **adcs,
-                                     pdd::access::TpcStream const *tpc,
-                                     int                        iticks,
-                                     int                        nticks)
-
+static bool getMultiChannelDataBase (uint16_t              *const *adcs,
+                                     pdd::access::TpcStream const  *tpc,
+                                     int                         iticks,
+                                     int                         nticks)
 {
-   using namespace pdd::fragment;
+   using namespace pdd;
+   using namespace pdd::access;
 
-   Toc           const            *toc = tpc->getToc            ();
-   TpcPacket     const         *pktRec = tpc->getPacket         ();
-   int                        npktDscs = toc->getNDscs          ();
-   TpcPacketBody const           *pkts = pktRec->getBody        ();
-   TocBody const              *tocBody = toc->getBody           ();
-   TocBody::PacketDsc   const *pktDscs = tocBody->getPacketDscs ();
+   record::TpcToc          const     *toc = tpc->getToc               ();
+   record::TpcPacket       const  *pktRec = tpc->getPacket            ();
+   record::TpcTocHeader    const  *tocHdr = TpcToc::getHeader         (toc);
+   record::TpcTocBody      const *tocBody = TpcToc::getBody           (toc);
+   int                           npktDscs = TpcTocHeader::getNPacketDscs (tocHdr);
+   record::TpcPacketBody   const    *pkts = TpcPacket::getBody           (pktRec);
+   record::TpcTocPacketDsc const *pktDscs = TpcTocBody::getPacketDscs    (tocBody);
 
 
    int nframes = 1024 * npktDscs;
@@ -353,23 +353,36 @@ static bool getMultiChannelDataBase (uint16_t                   **adcs,
 
 
 /* ---------------------------------------------------------------------- */
-static bool getMultiChannelDataBase (std::vector<std::vector<uint16_t>> &adcs, 
-                                     pdd::access::TpcStream const        *tpc,
-                                     int                               iticks,
-                                     int                               nticks)
+static bool getMultiChannelDataBase (std::vector<TpcAdcVector>      &adcs, 
+                                     pdd::access::TpcStream const    *tpc,
+                                     int                           iticks,
+                                     int                           nticks)
 {
-   using namespace pdd::fragment;
-   Toc     const                  *toc = tpc->getToc            ();
-   TocBody const              *tocBody = toc->getBody           ();
-   TpcPacket     const         *pktRec = tpc->getPacket         ();
-   TpcPacketBody const           *pkts = pktRec->getBody        ();
-   int                        npktDscs = toc->getNDscs          ();
-   TocBody::PacketDsc   const *pktDscs = tocBody->getPacketDscs ();
-   int ichan  = 0;
 
 
-   uint16_t    *pAdcs[128];
+   using namespace pdd;
+   using namespace pdd::access;
 
+   record::TpcToc          const     *toc = tpc->getToc   ();
+   record::TpcPacket       const  *pktRec = tpc->getPacket();
+
+   int                           npktDscs = TpcToc   ::getNPacketDscs (toc);
+   record::TpcTocPacketDsc const *pktDscs = TpcToc   ::getPacketDscs  (toc);
+   record::TpcPacketBody   const    *pkts = TpcPacket::getBody     (pktRec);
+   
+/*
+   record::TpcToc          const     *toc = tpc->getToc         ();
+   record::TpcPacket       const  *pktRec = tpc->getPacket      ();
+   record::TpcTocHeader    const  *tocHdr = TpcToc::getHeader         (toc);
+   record::TpcTocBody      const *tocBody = TpcToc::getBody           (toc);
+   int                           npktDscs = TpcTocHeader::getNPacketDscs (tocHdr);
+   record::TpcPacketBody   const    *pkts = TpcPacket::getBody           (pktRec);
+   record::TpcTocPacketDsc const *pktDscs = TpcTocBody::getPacketDscs    (tocBody);
+   */
+
+   uint16_t *pAdcs[128];
+
+   int   ichan = 0;
    int nframes = 1024 * npktDscs;
    int  mticks = (nticks < 0) ? nframes : nticks;
 
@@ -380,7 +393,7 @@ static bool getMultiChannelDataBase (std::vector<std::vector<uint16_t>> &adcs,
 
    for (; ichan < 128; ++ichan)
    {
-      adcs [ichan].resize (nframes);
+      adcs [ichan].reserve (nframes);
       pAdcs[ichan] = adcs[ichan].data ();
    }
 
@@ -420,7 +433,7 @@ static bool getMultiChannelDataBase (std::vector<std::vector<uint16_t>> &adcs,
 bool TpcStreamUnpack::getMultiChannelDataUntrimmed (uint16_t  *adcs,
                                                       int    nticks) const
 {
-   bool ok = getMultiChannelDataBase (adcs, &m_rawStream, 0, nticks);
+   bool ok = getMultiChannelDataBase (adcs, &m_stream, 0, nticks);
    return ok;
 }
 /* ---------------------------------------------------------------------- */
@@ -449,7 +462,7 @@ bool TpcStreamUnpack::getMultiChannelDataUntrimmed (uint16_t  *adcs,
 bool TpcStreamUnpack::getMultiChannelDataUntrimmed(uint16_t **adcs,
                                                      int    nticks) const
 {
-   bool ok = getMultiChannelDataBase (adcs, &m_rawStream, 0, nticks);
+   bool ok = getMultiChannelDataBase (adcs, &m_stream, 0, nticks);
    return ok;
 }
 /* ---------------------------------------------------------------------- */
@@ -478,10 +491,10 @@ bool TpcStreamUnpack::getMultiChannelDataUntrimmed(uint16_t **adcs,
                                                                           */
 /* ---------------------------------------------------------------------- */
 bool TpcStreamUnpack::
-     getMultiChannelDataUntrimmed (std::vector<std::vector<uint16_t>> &adcs) const
+     getMultiChannelDataUntrimmed (std::vector<TpcAdcVector> &adcs) const
                                                
 {
-   bool ok = getMultiChannelDataBase (adcs, &m_rawStream, 0, -1);
+   bool ok = getMultiChannelDataBase (adcs, &m_stream, 0, -1);
    return ok;
 }
 /* ---------------------------------------------------------------------- */
@@ -494,19 +507,32 @@ static inline void getTrimmed (pdd::access::TpcStream const *tpc,
                                int                          *beg,
                                int                       *nticks)
 {
-   auto    indices = locateIndices (tpc);
+   using namespace pdd;
+   using namespace pdd::access;
 
-   uint32_t begIdx = indices->getBegin ();
-   uint32_t endIdx = indices->getEnd   ();
+   pdd::record::TpcRanges const *ranges = tpc->getRanges ();
+   unsigned int                  bridge = TpcRanges::getBridge  (ranges);
+   pdd::access::TpcRangesIndices indices (TpcRanges::getIndices (ranges), 
+                                                                 bridge);
 
-   int      begPkt = indices->getPacket (begIdx);
-   int      begOff = indices->getOffset (begIdx);
+   uint32_t begIdx = indices.getBegin ();
+   uint32_t endIdx = indices.getEnd   ();
 
-   int      endPkt = indices->getPacket (endIdx);
-   int      endOff = indices->getOffset (endIdx);
+   int      begPkt = indices.getPacket (begIdx);
+   int      begOff = indices.getOffset (begIdx);
 
-   *nticks = 1024 * (endPkt - begPkt + 1) - begOff + endOff;
-   *beg    = 1024 * begPkt + begOff;
+   int      endPkt = indices.getPacket (endIdx);
+   int      endOff = indices.getOffset (endIdx);
+
+
+   // -----------------------------------------------------------
+   // 2017.10.05 -- jjr
+   // -----------------
+   // Corrected the nticks calculation; it previously incorrectly
+   // was (endPkt - begPkt + 1).
+   // -----------------------------------------------------------
+   *nticks = 1024 * (endPkt - begPkt) - begOff + endOff;
+   *beg    = 1024 *  begPkt + begOff;
 
    return;
 }
@@ -516,33 +542,33 @@ static inline void getTrimmed (pdd::access::TpcStream const *tpc,
 
 
 // method to unpack all channels in a fragment
-bool TpcStreamUnpack::getMultiChannelData(uint16_t *adcs, int nticks) const
+bool TpcStreamUnpack::getMultiChannelData(uint16_t *adcs) const
 {
-   int beg;
-   int mticks;
+   int    beg;
+   int nticks;
 
-   getTrimmed (&m_rawStream, &beg, &mticks);
-   bool ok = getMultiChannelDataBase (adcs, &m_rawStream, beg, nticks);
+   getTrimmed (&m_stream, &beg, &nticks);
+   bool ok = getMultiChannelDataBase (adcs, &m_stream, beg, nticks);
    return ok;
 }
 
 bool TpcStreamUnpack::getMultiChannelData(uint16_t **adcs) const
 {
-   int beg;
+   int    beg;
    int nticks;
-   getTrimmed (&m_rawStream, &beg, &nticks);
 
-   bool ok = getMultiChannelDataBase (adcs, &m_rawStream, beg, nticks);
+   getTrimmed (&m_stream, &beg, &nticks);
+   bool ok = getMultiChannelDataBase (adcs, &m_stream, beg, nticks);
    return ok;
 }
 
-bool TpcStreamUnpack::getMultiChannelData(std::vector<std::vector<uint16_t>> &adcs) const
+bool TpcStreamUnpack::getMultiChannelData(std::vector<TpcAdcVector> &adcs) const
 {
-   int beg;
+   int    beg;
    int nticks;
-   getTrimmed (&m_rawStream, &beg, &nticks);
 
-   bool ok = getMultiChannelDataBase (adcs, &m_rawStream, beg, nticks);
+   getTrimmed (&m_stream, &beg, &nticks);
+   bool ok = getMultiChannelDataBase (adcs, &m_stream, beg, nticks);
    return ok;
 }
 
@@ -550,21 +576,22 @@ bool TpcStreamUnpack::getMultiChannelData(std::vector<std::vector<uint16_t>> &ad
 
 
 /* ---------------------------------------------------------------------- */
-static pdd::fragment::WibFrame const 
+static pdd::record::WibFrame const 
 *locateWibFrames (pdd::access::TpcStream const &tpc) __attribute__ ((unused));
 
 
-static pdd::fragment::WibFrame const 
+static pdd::record::WibFrame const 
            *locateWibFrames (pdd::access::TpcStream const &tpc)
 
 {
-   using namespace pdd::fragment;
+   using namespace pdd;
+   using namespace pdd::access;
 
-   Toc const                      *toc = tpc.getToc             ();
-   TpcPacket          const    *pktRec = tpc.getPacket          ();
-   TpcPacketBody      const      *pkts = pktRec->getBody        ();
-   TocBody            const   *tocBody = toc->getBody           ();
-   TocBody::PacketDsc const   *pktDscs = tocBody->getPacketDscs ();
+   record::TpcToc          const     *toc = tpc.getToc                ();
+   record::TpcPacket       const  *pktRec = tpc.getPacket             ();
+   record::TpcPacketBody   const    *pkts = TpcPacket::getBody        (pktRec);
+   record::TpcTocBody      const *tocBody = TpcToc::getBody           (toc);
+   record::TpcTocPacketDsc const *pktDscs = TpcTocBody::getPacketDscs (tocBody);
 
 
    // --------------------------------------------------------------
@@ -573,11 +600,9 @@ static pdd::fragment::WibFrame const
    // This not only assumes, but demands that the WibFrames are all
    // consecutive. 
    // -------------------------------------------------------------
-   int    o64 = pktDscs[0].getOffset64 ();
-
-
-   uint64_t const *ptr   = reinterpret_cast<decltype(ptr)>(pkts) + o64;
-   pdd::fragment::WibFrame const *frame = reinterpret_cast<decltype(frame)>(ptr);
+   int                           o64 = TpcTocPacketDsc::getOffset64 (pktDscs);
+   uint64_t const               *ptr = reinterpret_cast<decltype(ptr)>(pkts) + o64;
+   pdd::record::WibFrame const *frame = reinterpret_cast<decltype(frame)>(ptr);
 
    return frame;
 }
@@ -595,15 +620,15 @@ static pdd::fragment::WibFrame const
 /* ---------------------------------------------------------------------- */
 TpcStreamUnpack::timestamp_t TpcStreamUnpack::getTimeStampUntrimmed () const
 {
-   using namespace pdd::fragment;
-   Ranges                             const *ranges = m_rawStream.getRanges ();
-   RangesBody                         const   *body = ranges->getBody       ();
-   RangesBody::Descriptor             const    *dsc = body->getDescriptor   ();
-   RangesBody::Descriptor::Timestamps const     *ts = dsc->getTimestamps    ();
-   
-   timestamp_t begin = ts->getBegin ();
-   return      begin;
+   using namespace pdd;
+   using namespace pdd::access;
 
+   record::TpcRanges           const *ranges = m_stream.getRanges ();
+   unsigned int                       bridge = TpcRanges::getBridge     (ranges);
+   record::TpcRangesTimestamps const     *ts = TpcRanges::getTimestamps (ranges);
+   
+   timestamp_t begin = TpcRangesTimestamps::getBegin (ts, bridge);
+   return      begin;
 }
 /* ---------------------------------------------------------------------- */
 
@@ -621,12 +646,15 @@ TpcStreamUnpack::timestamp_t TpcStreamUnpack::getTimeStampUntrimmed () const
 /* ---------------------------------------------------------------------- */
 TpcStreamUnpack::timestamp_t TpcStreamUnpack::getTimeStamp () const
 {
-   using namespace pdd::fragment;
+   using namespace pdd;
+   using namespace pdd::access;
 
-   Ranges             const *ranges = m_rawStream.getRanges ();
-   RangesBody         const   *body = ranges->getBody ();
-   RangesBody::Window const *window = body->getWindow ();
-   timestamp_t                begin = window->getBegin ();
+   record::TpcRanges       const *ranges = m_stream.getRanges        ();
+   unsigned int                   bridge = TpcRanges::getBridge      (ranges);
+   record::TpcRangesWindow const *window = TpcRanges::getWindow      (ranges);
+   timestamp_t                     begin = TpcRangesWindow::getBegin (window, 
+                                                                      bridge);
+
    return      begin;
 }
 /* ---------------------------------------------------------------------- */

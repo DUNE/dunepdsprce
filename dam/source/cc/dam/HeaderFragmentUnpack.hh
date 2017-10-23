@@ -45,10 +45,20 @@
 \* ---------------------------------------------------------------------- */
 
 
-#include "dam/Headers.hh"
+#include "dam/access/Headers.hh"
 
 
-/* ------------------------------------------------------------------- */
+/* ====================================================================== */
+/* DEFINITION : HeaderFragmentUnpack                                      */
+/* ---------------------------------------------------------------------- *//*!
+
+  \class HeaderFragmentUnpack
+  \brief Convenience class used to access a generic fragment header
+
+  \par
+   Most of the methods are inherited from the \a Header0 class.
+                                                                          */
+/* ---------------------------------------------------------------------- */
 class HeaderFragmentUnpack : public pdd::Header0
 {
    HeaderFragmentUnpack () = delete;
@@ -61,6 +71,10 @@ public:
    bool                         isData () const;
 };
 /* ---------------------------------------------------------------------- */
+/* DEFINITION : HeaderFragmentUnpack                                      */
+/* ====================================================================== */
+
+
 
 
 
@@ -114,8 +128,14 @@ HeaderFragmentUnpack *HeaderFragmentUnpack::assign (uint64_t *buf)
 /* ---------------------------------------------------------------------- */
 inline bool HeaderFragmentUnpack::isData () const
 {
-   if (getType () == static_cast<uint32_t>(pdd::fragment::Type::Data)) return true;
-   else                                                               return false;
+   if (getType () == static_cast<uint32_t>(pdd::fragment::Type::Data)) 
+   {
+      return true;
+   }
+   else
+   {
+      return false;
+   }
 }
 /* ---------------------------------------------------------------------- */
 /* IMPLEMENTATION : HeaderFragmentUnpack                                  */

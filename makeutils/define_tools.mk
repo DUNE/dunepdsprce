@@ -112,6 +112,17 @@ else
       CFLAGS      := -Wall -Werror -std=gnu99
       CXXFLAGS    := -Wall -Werror -pedantic -std=c++0x
 
+
+     ifeq ($(TARGET_OPT),avx2)
+        CFLAGS   += -march=core-avx2 -mtune=core-avx2
+        CXXFLAGS += -march=core-avx2 -mtune=core-avx2
+     else
+       ifeq ($(TARGET_OPT),avx)
+          CFLAGS   += -march=core-avx-i -mtune=core-avx-i -mavx
+          CXXFLAGS += -march=core-avx-i -mtune=core-avx-i -mavx
+       endif
+     endif
+
   else
 
      ifeq ($(TARGET_CPU),x86_32)

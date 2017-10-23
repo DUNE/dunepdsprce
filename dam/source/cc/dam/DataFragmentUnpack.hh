@@ -34,32 +34,81 @@
 \* ---------------------------------------------------------------------- */
 
 
-#include "dam/Headers.hh"
+#include "dam/access/DataFragment.hh"
 #include <cinttypes>
 
 
+/* ====================================================================== */
+/* FORWARD REFERENCES                                                     */
+/* ---------------------------------------------------------------------- */
+namespace pdd      {
+namespace fragment {
+   class DataFragmentHeader;
+   class Identifier;
+   class Originator;
+   class Data;
+}
+   class Trailer;
+}
+/* ====================================================================== */
 
+
+
+
+/* ====================================================================== */
+/* CLASS DEFINITION                                                       */
+/* ---------------------------------------------------------------------- *//*!
+
+  \class DataFragmentUnpack
+  \brief Provides access to a Data Fragment and its records
+
+  \par
+   This is more of a convenience class than anything else. Its main value
+   is in cacheing pointer to the records contained within a Data Fragment.
+
+   Finding thes records can also be done by the caller using the static
+   routines contained in this class, with no need to instantiate the 
+   class.  
+                                                                          */
+/* ---------------------------------------------------------------------- */
 class DataFragmentUnpack
 {
 public:
    DataFragmentUnpack (uint64_t const *buf);
 
-   bool                                                    isTpcNormal   () const;
-   uint32_t                                                getN64        () const;
-   pdd::fragment::Header<pdd::fragment::Type::Data> const *getHeader     () const;
-   pdd::fragment::Identifier                        const *getIdentifier () const;
-   pdd::fragment::Originator                        const *getOriginator () const;
-   pdd::fragment::Data                              const *getData       () const;
-   pdd::Trailer                                     const *getTrailer    () const;
+
+   // ------------------------------------------------------------
+   // Get the length of the Data Fragment and check its subtype
+   // Currently only TpcNormal streams exist, but this may change
+   // in the future.
+   // ------------------------------------------------------------
+   uint32_t                                getN64        () const;
+   bool                                    isTpcNormal   () const;
 
 
-   static pdd::fragment::Header<pdd::fragment::Type::Data> const 
-                                          *getHeader     (uint64_t const *buf);
-   static pdd::fragment::Identifier const *getIdentifier (uint64_t const *buf);
-   static pdd::fragment::Originator const *getOriginator (uint64_t const *buf);
-   static pdd::fragment::Data       const *getData       (uint64_t const *buf);
-   static pdd::Trailer              const *getTrailer    (uint64_t const *buf);
+   // ------------------------------------------------------------
+   // Access the records within the Data Fragment
+   // ------------------------------------------------------------
+   pdd::record::DataFragmentHeader const *getHeader     () const;
+   pdd::record::Identifier         const *getIdentifier () const;
+   pdd::record::Originator         const *getOriginator () const;
+   pdd::record::Data               const *getData       () const;
+   pdd::Trailer                    const *getTrailer    () const;
 
+
+   static pdd::record::DataFragmentHeader 
+                                     const *getHeader     (uint64_t const *buf);
+   static pdd::record::Identifier    const *getIdentifier (uint64_t const *buf);
+   static pdd::record::Originator    const *getOriginator (uint64_t const *buf);
+   static pdd::record::Data          const *getData       (uint64_t const *buf);
+   static pdd::Trailer               const *getTrailer    (uint64_t const *buf);
+
+
+   // ---------------------------------------------------------
+   // Crude print methods, meant only to get one off the ground
+   // Given the size and complexity of a Data Fragment, writing
+   // one-size-fits-all print routines is not feasible.
+   // ---------------------------------------------------------
    void print           () const;
    void printHeader     () const;
    void printIdentifier () const;
@@ -67,16 +116,11 @@ public:
    void printData       () const;
    void printTrailer    () const;
 
-
    static void print (pdd::Header0 const  *header);
    static void print (pdd::Trailer const *trailer);
 
-
-private:
-   uint64_t                  const         *m_buf;
-   pdd::fragment::Originator const  *m_originator;
-   pdd::fragment::Data       const        *m_data;
-   pdd::Trailer              const     *m_trailer;
+public:
+   pdd::access::DataFragment     m_df;
 };
 /* ====================================================================== */
 

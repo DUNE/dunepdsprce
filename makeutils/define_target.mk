@@ -34,9 +34,13 @@ HOST := $(HOST_CPU)-$(HOST_OS)
 # ---------------------------------------------
 # Define and verify the host/target combination
 # ---------------------------------------------
-VALID_TARGET_SET := x86_32-linux x86_64-linux arm_CA9-linux arm_CA9-rtems
-ifdef TARGET
+VALID_TARGET_SET := x86_32-linux               \
+                    x86_64-gen-linux           \
+                    x86_64-avx-linux           \
+                    x86_64-avx2-linux linux    \
+                    arm_CA9-linux arm_CA9-rtems
 
+ifdef TARGET
 
    # ----------------------------
    # Check if have a valid target
@@ -49,9 +53,11 @@ ifdef TARGET
   # --- Change fields of the target to whitespace delimited list
   space :=
   space += 
-  tmp = $(subst -,$(space),$(TARGET))
+  tmp   := $(subst -,$(space),$(TARGET))
+
   TARGET_CPU := $(word 1,$(tmp))
-  TARGET_OS  := $(word 2,$(tmp))
+  TARGET_OPT := $(word 2,$(tmp))
+  TARGET_OS  := $(word 3,$(tmp))
 
 else
 

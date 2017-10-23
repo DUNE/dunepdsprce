@@ -29,45 +29,65 @@ else
    TARGET = $(target)
 endif
 
+ALL_TARGET_X86_64 := x86_64-gen-linux \
+                     x86_64-avx-linux \
+                     x86_64-avx2-linux 
+
 
 ifdef TARGET
-   space :=
-   space += 
-   comma :=,
-   TARGET := $(subst $(comma),$(space),$(TARGET))
-   ifneq ($(words $(TARGET)),1)
 
-      makefile = $(firstword $(MAKEFILE_LIST))
+   # -------------------------------------------------------------
+   # If have specified to build for all x86 targets, expand to all
+   # -------------------------------------------------------------
+   TARGET := $(subst x86_64-linux,$(ALL_TARGET_X86_64),$(TARGET))
 
-      ifeq ($(MAKECMDGOALS),)
-         # -- Nothing specified, default to all
-         # -- This ensures that a per target rule gets generated
-         goals := all
-      else
-         # -- Set recursed goal list to filter out the non-recursed goals
-         goals := $(MAKECMDGOALS)
-      endif
+else
+
+   # -----------------------------
+   # Default to all X86_64 targets
+   # -----------------------------
+   TARGET := $(ALL_TARGET_X86_64)
+
+endif
 
 
-      # -------------------------------------------------------
-      # -- Only trigger the per target makes for the first goal
-      # -------------------------------------------------------
-      first_goal = $(word 1,$(goals))
-      $(word 1,$(goals)) :
-	echo "Spawning for first of $(TARGET) $^"
+# ---------------------------------------------------
+# Change comma separated list to space separated list
+# ---------------------------------------------------
+space  :=
+space  += 
+comma  :=,
+TARGET := $(subst $(comma),$(space),$(TARGET))
+
+
+ifneq ($(words $(TARGET)),1)
+
+   makefile = $(firstword $(MAKEFILE_LIST))
+
+   ifeq ($(MAKECMDGOALS),)
+      # -- Nothing specified, default to all
+      # -- This ensures that a per target rule gets generated
+      goals := all
+   else
+      # -- Set recursed goal list to filter out the non-recursed goals
+      goals := $(MAKECMDGOALS)
+   endif
+
+
+   # -------------------------------------------------------
+   # -- Only trigger the per target makes for the first goal
+   # -------------------------------------------------------
+   first_goal = $(word 1,$(goals))
+   $(word 1,$(goals)) :
+	@echo -e "Building for these targets: $(TARGET) $^ \n"
 	@$(foreach t,$(TARGET), $(MAKE) --no-print-directory -f $(makefile)\
            target=$(t) $(MAKECMDGOALS);)
 
-     # -- Nop the remaining goals
-     $(filter-out $(first_goal),$(goals)):
+   # -- Nop the remaining goals
+   $(filter-out $(first_goal),$(goals)):
 	@true
 
-   else
-      # -- Only one target defined, just process it
-      CONTINUE := 1
-   endif
-
 else
-     # -- No target defined, use the default one
-     CONTINUE := 1
+   # -- Only one target defined, just process it
+   CONTINUE := 1
 endif

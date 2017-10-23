@@ -26,6 +26,11 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.10.05 jjr Fixed error in data read.  Previously was passing the
+                  the length of the data as bytes; the method expected
+                  the length in terms of 64-bit words.
+   2017.10.04 jjr Eliminated the number of adcs parameter from the
+                  getMultiChannel call.
    2017.07.27 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -36,6 +41,7 @@
 #include "dam/DataFragmentUnpack.hh"
 #include "dam/TpcFragmentUnpack.hh"
 #include "dam/TpcStreamUnpack.hh"
+#include "dam/access/WibFrame.hh"
 
 
 #include <cstdlib>
@@ -86,7 +92,7 @@ static void processRaw     (TpcStreamUnpack const *tpc);
 /* ---------------------------------------------------------------------- */
 int main (int argc, char *const argv[])
 {
-   static size_t const MaxBuf = 4 * 1024 * 1024;
+   static size_t const MaxBuf = 10 * 1024 * 1024;
 
    // -----------------------------------
    // Extract the command line parameters
@@ -130,7 +136,7 @@ int main (int argc, char *const argv[])
       // Get the number of 64-bit words in this data fragment
       // and read the body of the data fragment.
       // ----------------------------------------------------
-      uint64_t n64 = header->getN64 () * sizeof (uint64_t);
+      uint64_t n64 = header->getN64 ();
       reader.read (buf, n64, nbytes);
 
       processFragment (buf);
@@ -187,7 +193,8 @@ static void processFragment (uint64_t const *buf)
          // ------------------------------------------------
          TpcFragmentUnpack tpcFragment (df);
 
-
+         df.printHeader  ();
+         df.printTrailer ();
          // --------------------------------------------
          // Get the number and loop over the TPC streams
          // --------------------------------------------
@@ -256,29 +263,33 @@ static void process (TpcStreamUnpack const *tpcStream)
    int  adcNBytes = adcCnt    * sizeof (uint16_t);
    uint16_t *adcs = reinterpret_cast <decltype (adcs)>(malloc (adcNBytes));
 
-   printf ("Transposing data: allocated %u bytes @ %p\n", adcNBytes, (void *)adcs);
+   printf ("Transposing data: allocated %u bytes @ %p\n", 
+           adcNBytes, (void *)adcs);
 
-   int adcsPerChannel = trimmedNticks;
-   tpcStream->getMultiChannelData (adcs, adcsPerChannel);
+   tpcStream->getMultiChannelData (adcs);
 
 
+   #if 0
    // ----------------------------------
    // Just dumping a portion of the data
    // ----------------------------------
+   int adcsPerChannel = trimmedNticks;
    for (int ichan = 0; ichan < nchannels; ++ichan)
    {
       for (int itick = 0; itick < 32; itick += 8)
       {
-         printf (" %2.2x.%4.4x: %p"
-                 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
-                 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 "\n",
-                 ichan, itick, (void *)(adcs+itick),
-                 adcs[itick + 0], adcs[itick + 1], adcs[itick + 2], adcs[itick + 3],
-                 adcs[itick + 4], adcs[itick + 5], adcs[itick + 6], adcs[itick + 7]);
+         printf (
+            " %2.2x.%4.4x: %p"
+            " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
+            " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 "\n",
+            ichan, itick, (void *)(adcs+itick),
+            adcs[itick + 0], adcs[itick + 1], adcs[itick + 2], adcs[itick + 3],
+            adcs[itick + 4], adcs[itick + 5], adcs[itick + 6], adcs[itick + 7]);
       }
 
       adcs += adcsPerChannel;
    }
+   #endif
 
 
    // ===================================================================
@@ -289,6 +300,7 @@ static void process (TpcStreamUnpack const *tpcStream)
    // ===================================================================
 
 
+   free (adcs);
    return;
 }
 /* ---------------------------------------------------------------------- */
@@ -304,9 +316,11 @@ static void process (TpcStreamUnpack const *tpcStream)
  |  As such, they take a bit more expertise.                              |
  |                                                                        |
 \* ---------------------------------------------------------------------- */
-#include "dam/Headers.hh"
-#include "dam/TpcStream.hh"
-#include "dam/TpcRecords.hh"
+#include "dam/access/Headers.hh"
+#include "dam/access/TpcStream.hh"
+#include "dam/access/TpcRanges.hh"
+#include "dam/access/TpcToc.hh"
+#include "dam/access/TpcPacket.hh"
 
 
 /* ---------------------------------------------------------------------- *//*!
@@ -319,13 +333,19 @@ static void process (TpcStreamUnpack const *tpcStream)
 /* ---------------------------------------------------------------------- */
 static void processRaw (TpcStreamUnpack const *tpcStream)
 {
-   using namespace pdd::fragment;
+   using namespace pdd;
+   using namespace pdd::access;
 
    TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
-   Ranges        const    *ranges = tpcStream->m_rawStream.getRanges ();
-   Toc           const    *toc    = tpcStream->m_rawStream.getToc    ();
-   TpcPacket     const    *pktRec = tpcStream->m_rawStream.getPacket ();
-   TpcPacketBody const    *pkts   = pktRec->getBody ();
+   TpcStream const        &stream = tpcStream->getStream ();
+
+   // -----------------------
+   // Construct the accessors
+   // -----------------------
+   TpcRanges        ranges (stream.getRanges ());
+   TpcToc           toc    (stream.getToc    ());
+   TpcPacket        pktRec (stream.getPacket ());
+   uint64_t const  *pkts  = pktRec.getData   ();
 
 
    printf ("TpcStream: %1d.%1d.%1d\n",
@@ -333,30 +353,29 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
            id.getSlot  (),
            id.getFiber ());
 
-   ranges->print ();
-   toc   ->print ();
+   ranges.print ();
+   toc   .print ();
    
 
-   TocBody            const *tocBody = toc->getBody             ();
-   TocBody::PacketDsc const *pktDscs = tocBody->getPacketDscs   ();
-   int                         npkts = toc->getNDscs            ();
+   int   npkts = toc.getNPacketDscs ();
 
 
    for (int ipkt = 0; ipkt < npkts; ++ipkt)
    {
-      TocBody::PacketDsc        pktDsc = pktDscs[ipkt];
-      unsigned int                 o64 = pktDsc.getOffset64 ();
-      TocBody::PacketDsc::Type pktType = pktDsc.getType ();
+      TpcTocPacketDsc pktDsc (toc.getPacketDsc (ipkt));
+      unsigned int      o64 = pktDsc.getOffset64 ();
+      unsigned int  pktType = pktDsc.getType ();
+
       
       if (pktDsc.isWibFrame ())
       {
          printf ("Have Wib frames\n");
       }
 
-      uint64_t const *ptr = reinterpret_cast<decltype(ptr)>(pkts) + o64;
+      uint64_t const *ptr = pkts + o64;
       printf ("Packet[%2u:%1u] = "
               " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n",
-              ipkt, static_cast<unsigned int>(pktType),
+              ipkt, pktType,
               ptr[0], ptr[1], ptr[2]);
 
 
@@ -384,10 +403,13 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          auto cvt0 = colddata[0].getConvertCount ();
          auto cvt1 = colddata[1].getConvertCount ();
          
-         puts   ("  Wf  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
-                 "---- -- -- ------------- ------- -------- ---------------- ---- ----");
+         puts   (
+        "  Wf  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
+        "---- -- -- ------------- ------- -------- ---------------- ---- ----");
          
-         printf ("%4u: %2.2x %2.2x %2.2x.%1.1x.%1.1x (%3.3x), %6.6x %8.8x %16.16" PRIx64 " %4.4x %4.4x\n",
+         printf (
+            "%4u: %2.2x %2.2x %2.2x.%1.1x.%1.1x (%3.3x), %6.6x %8.8x %16.16" 
+            PRIx64 " %4.4x %4.4x\n",
                  iwf,
                  commaChar, version,
                  crate, slot, fiber, id,
@@ -425,28 +447,28 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
             puts   ("   iCd SE Rv  ChkSums  Cvt ErRg Rsvd      Hdrs\n"
                     "   --- -- -- -------- ---- ---- ----  --------");
             
-            printf ("     %1x %2.2x %2.2x %8.8x %4.4x %4.4x %4.4x  %8.8" PRIx32 "\n",
-                    icd, 
-                    streamErrs,  reserved0, checkSums, cvtCnt,
-                    errRegister, reserved1, hdrs);
-
-            uint16_t adcs[WibFrame::ColdData::NAdcs];
+            printf (
+               "     %1x %2.2x %2.2x %8.8x %4.4x %4.4x %4.4x  %8.8" PRIx32 "\n",
+               icd, 
+               streamErrs,  reserved0, checkSums, cvtCnt,
+               errRegister, reserved1, hdrs);
+            
+            uint16_t adcs[WibColdData::NAdcs];
             cd.expandAdcs64x1 (adcs, packedAdcs);
 
-            for (unsigned iadc = 0;  iadc < WibFrame::ColdData::NAdcs; iadc += 8)
+            for (unsigned iadc = 0; iadc < WibColdData::NAdcs; iadc += 8)
             {
-               printf ("   %2.2x:"
-                       " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
-                       " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 "\n",
-                       iadc,  
-                       adcs[iadc + 0], adcs[iadc + 1], adcs[iadc + 2], adcs[iadc + 3],
-                       adcs[iadc + 4], adcs[iadc + 5], adcs[iadc + 6], adcs[iadc + 7]);
+               printf (
+               "Chn%2x:"
+               " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
+               " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 "\n",
+               iadc,  
+               adcs[iadc + 0], adcs[iadc + 1], adcs[iadc + 2], adcs[iadc + 3],
+               adcs[iadc + 4], adcs[iadc + 5], adcs[iadc + 6], adcs[iadc + 7]);
             }
          }
          putchar ('\n');
-      }
-      
-      
+      }      
    }
 
    return;

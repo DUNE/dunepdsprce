@@ -1,0 +1,112 @@
+ 1. AlignedAllocator.hh
+ 2. BfExtract.hh
+ 3. DataFragmentUnpack.hh
+ 4. HeaderFragmentUnpack.hh
+ 5. Headers.hh
+ 6. TpcAdcVector.hh
+ 7. TpcFragmentUnpack.hh
+ 8. TpcRecords.hh
+ 9. TpcStream.hh
+10. TpcStreamUnpack.hh
+11. WibFrame.hh
+
+1. AlignedAllocator
+     This class should probably be buried in the src/ directory and only
+     access methods exposed, but I have not figured out how to do this
+     and still maintain a std::vector interface for TpcAdcVector. 
+
+
+2. BfExtract.hh 
+
+   macros 
+     PDD_EXTRACT
+     PDD_EXTRACT32
+     PDD_EXTRACT64
+
+  -- can these be turned into inlines?
+     The problem are the masks and offsets
+
+
+3. DataFragmentUnpack.hh
+
+   methods
+     isTpcNormal
+     getN64
+     getHeader           -- Should this be an inline, it is nothing but a cast?
+     getIdentifier
+     getOriginator
+     getData
+     getTrailer
+
+     print
+     printHeader
+     printIdentifier
+     printData
+     printTrailer
+
+   static
+     getHeader     (buf) -- Should this be an inline, it is nothing but a cast?
+     getIdentifier (buf)
+     getOriginator (buf)
+     getData       (buf)
+     getTrailer    (buf)
+
+   Data
+     m_buf
+     m_originator
+     m_data
+     m_trailer
+
+
+4. Headers
+5. HeaderFragmentUnpack
+     This class is meant to define each of  the 16 generic headers.  
+     These are thought to be static so exposing details to user code is
+     considered okay.  
+
+6. TpcAdcVector
+     Jacketing class for representing an array of ADC values as a std::vector.
+     The value added is that the std::vector template uses a custom allocator
+     to provide cache-aligned memory.
+
+     Hiding the implementation is difficult because one has to preserve
+     the interface of an std::vector. If one uses the typical pointer
+     implementation technique, one would have to duplicate the std::vector
+     interface.  Unfortunately C++ does not define an interface separately
+     from the class. 
+
+7. TpcFragmentUnpack
+     Methods
+       TpcFragmentUnpack
+       getNStreams ()
+       getStream ()
+
+     Data:
+       DataFragmentUnpack &
+       nstreams
+       TpcStreamsUnpack [2];
+      
+8. TpcRecords
+      This defines the raw record format.
+      Need to get the definitions of the bit fields out of this file -- DONE
+
+9. TpcStream
+       This contains cached pointers to the internal records 
+    -> Should one add some scratch space to accomodate when records?
+
+       pdd::fragment::TpcStream  const *
+       pdd::fragment::Ranges     const *
+       pdd::fragment::Toc        const *
+       pdd::fragment::TpcPacket  const *
+
+
+10. TpcStreamUnpack -- This is where all the action occurs
+
+      All Tom's interface routines
+      
+      data
+        TpcStream 
+
+11. WibFrame
+    IN PROGRESS
+      

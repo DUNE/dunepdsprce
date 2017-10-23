@@ -2,13 +2,13 @@
 
 /* ---------------------------------------------------------------------- *//*!
  *
- *  @file     DataFragment.CC
+ *  @file     DataFragment.cc
  *  @brief    Access methods for the RCE data fragments
  *            decoding a binary test file.
  *  @verbatim
  *                               Copyright 2017
  *                                    by
- *
+ * 
  *                       The Board of Trustees of the
  *                    Leland Stanford Junior University.
  *                           All rights reserved.
@@ -32,108 +32,249 @@
 
 
 #include "dam/DataFragmentUnpack.hh"
+#include "dam/access/Identifier.hh"
+#include "dam/access/Originator.hh"
+#include "dam/access/Data.hh"
+#include "dam/records/DataFragment.hh"
+
 #include <cinttypes>
 #include <cstdio>
 
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Constructor to populate pointers to the various subrecords of a 
+         data fragment
+
+  \param[in]  buf The ProtoDune data buffer.  This must have been 
+                  verified as a ProtoDune data.
+                                                                          */
+/* ---------------------------------------------------------------------- */
 DataFragmentUnpack::DataFragmentUnpack (uint64_t const *buf) :
-   m_buf        (buf),
-   m_originator (getOriginator (buf)),
-   m_data       (getData       (buf)),
-   m_trailer    (getTrailer    (buf))
+   m_df (buf)
 {
    return;
 }
+/* ---------------------------------------------------------------------- */
 
 
-pdd::fragment::Header<pdd::fragment::Type::Data> const *DataFragmentUnpack::getHeader () const
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief   Return a pointer to the DataFragment header.
+  \return  A pointer to the DataFragment header.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::DataFragmentHeader  const *
+            DataFragmentUnpack::getHeader () const
 {
-   return 
-      reinterpret_cast<pdd::fragment::Header<pdd::fragment::Type::Data> const *>
-      (m_buf);
+   auto const *hdr = m_df.getHeader ();
+   return      hdr;
 }
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Test if this DataFragment is a normal, \i.e. error free TPC
+          fragment.
+  \retval true,   if this DataFragment is a normal TPC fragment
+  \retval false,  if this DataFragment is not a normal TPC fragment
+                                                                          */
+/* ---------------------------------------------------------------------- */
 bool DataFragmentUnpack::isTpcNormal () const
 {
-   auto dfHeader    = getHeader ();
-   bool isTpcNormal = dfHeader->isTpcNormal ();
+   bool   isTpcNormal = m_df.isTpcNormal ();
    return isTpcNormal;
 }
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Get the length of this DataFragment, in units of 64-bit words
+  \return The length of this DataFragment, in units of 64-bit words
+                                                                          */
+/* ---------------------------------------------------------------------- */
 uint32_t  DataFragmentUnpack::getN64() const
 {
-   auto dfHeader = getHeader ();
-   auto n64      = dfHeader->getN64 ();
-   return n64;
+   uint32_t n64 = m_df.getN64 ();
+   return   n64;
 }
+/* ---------------------------------------------------------------------- */
 
 
 
-pdd::fragment::Identifier const *DataFragmentUnpack::getIdentifier () const
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Identifier subrecord.
+  \return A pointer to the Identifier subrecord.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::Identifier const *
+             DataFragmentUnpack::getIdentifier () const
 {
-   return getIdentifier (m_buf);
+   auto const *id = m_df.getIdentifier ();
+   return      id;
 }
+/* ---------------------------------------------------------------------- */
 
-pdd::fragment::Originator const *DataFragmentUnpack::getOriginator () const
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Originator subrecord.
+  \return A pointer to the Originator subrecord.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::Originator const *
+             DataFragmentUnpack::getOriginator () const
 {
-   return m_originator;
+   auto const *org = m_df.getOriginator ();
+   return      org;
 }
+/* ---------------------------------------------------------------------- */
 
-pdd::fragment::Data const *DataFragmentUnpack::getData () const
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Data subrecord.
+  \return A pointer to the Data subrecord.
+
+  \par
+   The Data subrecord contains not only the actual TPC data, but since
+   this data can occur in a various formats, additional subrecords to 
+   help locate and access this data.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::Data const *
+             DataFragmentUnpack::getData () const
 {
-   return m_data;
-}
-
-pdd::Trailer const *DataFragmentUnpack::getTrailer () const
-{
-   return m_trailer;
-}
-
-
-pdd::fragment::Header<pdd::fragment::Type::Data> const 
-              *DataFragmentUnpack::getHeader (uint64_t const *buf)
-{   
-   pdd::fragment::Header<pdd::fragment::Type::Data> const
-      *hdr = reinterpret_cast<decltype (hdr)>(buf);
-   return hdr;
-}
-
-pdd::fragment::Identifier const *DataFragmentUnpack::getIdentifier (uint64_t const *buf)
-{
-   pdd::Header0 const *hdr = getHeader (buf);
-   pdd::fragment::Identifier const *identifier 
-       = reinterpret_cast<decltype (identifier)>(hdr + 1);
-   return identifier;
-}
-
-
-pdd::fragment::Originator const *DataFragmentUnpack::getOriginator (uint64_t const *buf)
-{
-   pdd::Header0 const *hdr = getHeader (buf);
-   pdd::fragment::Originator const *originator
-          = reinterpret_cast<decltype (originator)>(hdr + 1 + hdr->getNaux64 ());
-   return originator;
-}
-
-
-pdd::fragment::Data const *DataFragmentUnpack::getData (uint64_t const *buf)
-{
-   pdd::fragment::Originator const *org = getOriginator (buf);
-   pdd::fragment::Data  const *data
-      = reinterpret_cast<decltype (data)>(
-         reinterpret_cast<uint64_t const *>(org) + org->getN64 ());
+   auto const *data = m_df.getData ();
    return data;
 }
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Trailer subrecord.
+  \return A pointer to the Trailer subrecord.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::Trailer const *DataFragmentUnpack::getTrailer () const
+{
+   auto const *tlr = m_df.getTrailer ();
+   return      tlr;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief   Return a pointer to the DataFragment header.
+  \return  A pointer to the DataFragment header.
+
+  \param[in]  buf The ProtoDune data buffer.  This must have been 
+                  verified as a ProtoDune data.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::DataFragmentHeader  const *
+             DataFragmentUnpack::getHeader (uint64_t const *buf)
+{   
+
+   auto const *hdr = getHeader (buf);
+   return      hdr;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Identifier subrecord.
+  \return A pointer to the Identifier subrecord.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::Identifier const *
+             DataFragmentUnpack::getIdentifier (uint64_t const *buf)
+{
+   auto const *identifier = pdd::access::DataFragment::getIdentifier (buf);
+   return identifier;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Originator subrecord.
+  \return A pointer to the Originator subrecord.
+
+  \param[in]  buf The ProtoDune data buffer.  This must have been 
+                  verified as a ProtoDune data.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::Originator const *
+               DataFragmentUnpack::getOriginator (uint64_t const *buf)
+{
+   auto const *originator = pdd::access::DataFragment::getOriginator (buf);
+   return originator;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Data subrecord.
+  \return A pointer to the Data subrecord.
+
+  \param[in]  buf The ProtoDune data buffer.  This must have been 
+                  verified as a ProtoDune data.
+
+  \par
+   The Data subrecord contains not only the actual TPC data, but since
+   this data can occur in a various formats, additional subrecords to 
+   help locate and access this data.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+pdd::record::Data const *
+             DataFragmentUnpack::getData (uint64_t const *buf)
+{
+   pdd::record::Data  const *data = pdd::access::DataFragment::getData (buf);
+   return data;
+}
+/* ---------------------------------------------------------------------- */
  
-                            
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Trailer subrecord.
+  \return A pointer to the Trailer subrecord.
+
+  \param[in]  buf The ProtoDune data buffer.  This must have been 
+                  verified as a ProtoDune data.
+                                                                          */
+/* ---------------------------------------------------------------------- */
 pdd::Trailer const *DataFragmentUnpack::getTrailer (uint64_t const *buf)
 {
-   uint32_t            n64 = getHeader(buf)->getN64 ();
-   pdd::Trailer const *tlr = reinterpret_cast<decltype(tlr)>
-                            (buf + n64 - sizeof (*tlr)/sizeof(uint64_t));
+   auto const *tlr = pdd::access::DataFragment::getTrailer (buf);
    return tlr;
 }
+/* ---------------------------------------------------------------------- */
 
 
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Prints all or portions of the Data Fragment's subrecords
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::print () const
 {
    printHeader      ();
@@ -142,16 +283,33 @@ void DataFragmentUnpack::print () const
    printData        ();
    return;
 }
+/* ---------------------------------------------------------------------- */
 
 
 
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Print the Data Fragment Header
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::printHeader () const
 {
-   pdd::Header0 const *hdr = getHeader ();
+   auto const hdr = getHeader ();
    print (hdr);
    return;
 }
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Print's a generic Fragment Header interpretted as a 
+          Data Fragment Header.
+
+  \param[in] header The generic Fragment Header.
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::print (pdd::Header0 const *header)
 {
    printf ("Header: %16.16" PRIx64 "\n", header->retrieve());
@@ -169,34 +327,83 @@ void DataFragmentUnpack::print (pdd::Header0 const *header)
            n64, naux64,
            subtype, bridge);
 }
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Print the Identifier record
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::printIdentifier () const
 {
-   pdd::fragment::Identifier const *id = getIdentifier ();
-   id->print ();
+   pdd::access::Identifier const id ( getIdentifier ());
+   id.print ();
    return;
 }
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Print the Originator record
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::printOriginator () const
 {
-   pdd::fragment::Originator const *org = getOriginator ();
-   org->print ();
+   pdd::access::Originator const org (getOriginator ());
+   org.print ();
    return;
 }
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Print some portion of Data record
+
+  \par
+   Since the Data record is potentially very large, only the meta-data
+   and some limited piece of the actual TPC data is printed.  There 
+   really is no way to provide a generic print routine that will satisfy
+   the needs in all or even most circumstances, so this is meant more as
+   a first level, get off-the-ground method.
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::printData () const
 {
-   pdd::fragment::Data const *dat = getData ();
-   dat->print ();
-}      
+   pdd::access::Data const data(getData ());
+   data.print ();
+}
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Print the Trailer record
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::printTrailer () const
 {
    pdd::Trailer const *tlr = getTrailer ();
    print (tlr);
    return;
 }
+/* ---------------------------------------------------------------------- */
 
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Print the Trailer record
+
+  \param[in] trailer Pointer to the trailer record.  
+                                                                          */
+/* ---------------------------------------------------------------------- */
 void DataFragmentUnpack::print (pdd::Trailer const *trailer)
 {
    printf ("Trailer = %16.16" PRIx64 "\n", trailer->retrieve ());
