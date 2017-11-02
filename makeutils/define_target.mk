@@ -57,7 +57,7 @@ DEFAULT_TARGET_SET := darwin
 else
 VALID_TARGET_SET := x86_64-gen-linux           \
                     x86_64-avx-linux           \
-                    x86_64-avx2-linux linux
+                    x86_64-avx2-linux
 
 DEFAULT_TARGET_SET := linux
 

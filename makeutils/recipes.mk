@@ -1896,7 +1896,8 @@ print_directories:
                "\n"
 
 print_end_of_build:
-	@echo  "End   build of package........ $(PRJNAME) - $(TARGET)\n" 
+	@echo $(ECHO_OPT) \
+              "End   build of package........ $(PRJNAME) - $(TARGET)\n" 
 
 
 print_flags:
