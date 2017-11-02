@@ -178,7 +178,8 @@ public:
 private:
    pdd::record::TpcRangesIndices const *m_indices;
    uint32_t                              m_bridge;
-   uint32_t                                m_rsvd __attribute__ ((unused));
+   uint32_t                                m_rsvd
+            __attribute__ ((CLASS_MEMBER_UNUSED));
 
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */
@@ -214,7 +215,8 @@ public:
 private:
    pdd::record::TpcRangesTimestamps const *m_timestamps;
    uint32_t                                    m_bridge;
-   uint32_t                                      m_rsvd __attribute ((unused));
+   uint32_t                                      m_rsvd 
+                   __attribute__ ((CLASS_MEMBER_UNUSED));
 
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */   
@@ -255,7 +257,8 @@ public:
 private:
    pdd::record::TpcRangesWindow const *m_window;
    uint32_t                            m_bridge;
-   uint32_t                              m_rsvd  __attribute ((unused));
+   uint32_t                              m_rsvd 
+          __attribute__ ((CLASS_MEMBER_UNUSED));
       
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */

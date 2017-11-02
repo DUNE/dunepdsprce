@@ -55,11 +55,9 @@ DEFAULT_TARGET_SET := darwin
 
 
 else
-VALID_TARGET_SET := x86_32-linux               \
-                    x86_64-gen-linux           \
+VALID_TARGET_SET := x86_64-gen-linux           \
                     x86_64-avx-linux           \
-                    x86_64-avx2-linux linux    \
-                    arm_CA9-linux arm_CA9-rtems
+                    x86_64-avx2-linux linux
 
 DEFAULT_TARGET_SET := linux
 

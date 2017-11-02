@@ -64,6 +64,8 @@ namespace record {
 namespace pdd    {
 namespace access {
 
+//#undef  CLASS_MEMBER_UNUSED
+//#define CLASS_MEMBER_UNUSED
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -94,7 +96,8 @@ private:
    pdd::record::TpcRanges       const   *m_ranges; /*!< Time/Packet Ranges*/
    pdd::record::TpcToc          const      *m_toc; /*!< Table of Contents */
    pdd::record::TpcPacket       const   *m_packet; /*!< The data packets  */
-   void                         const  *m_rsvd[4]  __attribute__ ((unused));
+   void                         const  *m_rsvd[4]  
+                                       __attribute__ ((CLASS_MEMBER_UNUSED));
                                                    /*!< Future use        */
 };
 /* ---------------------------------------------------------------------- */

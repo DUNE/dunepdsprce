@@ -106,7 +106,7 @@ public:
 
 
 private:
-   pdd::access::DataFragment  const             &m_df __attribute ((unused));
+   pdd::access::DataFragment  const             &m_df __attribute__ ((CLASS_MEMBER_UNUSED));
    int                                     m_nstreams;
    pdd::access::TpcStream m_tpcStreams[MaxTpcStreams];
 };
