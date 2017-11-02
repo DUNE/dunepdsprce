@@ -79,7 +79,7 @@ ifneq ($(words $(TARGET)),1)
    # -------------------------------------------------------
    first_goal = $(word 1,$(goals))
    $(word 1,$(goals)) :
-	@echo -e "Building for these targets: $(TARGET) $^ \n"
+	@echo $(ECHO_OPT) "\nBuilding for these targets: $(TARGET) $^ \n"
 	@$(foreach t,$(TARGET), $(MAKE) --no-print-directory -f $(makefile)\
            target=$(t) $(MAKECMDGOALS);)
 

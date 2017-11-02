@@ -43,6 +43,11 @@
   
    DATE       WHO WHAT
    ---------- --- -------------------------------------------------------
+   2017.10.27 jjr Modified for gcc on the MAC,
+                  The compiler complained that the field m_df was unused,
+                  even though it does appear to be used in the constructor,
+                  I marked with __attribute__ ((unused)), but shouldn't
+		  have had to.
    2017.10.07 jjr Created from TpcFragmentUnpack.hh
   
 \* ---------------------------------------------------------------------- */
@@ -101,7 +106,7 @@ public:
 
 
 private:
-   pdd::access::DataFragment  const             &m_df;
+   pdd::access::DataFragment  const             &m_df __attribute ((unused));
    int                                     m_nstreams;
    pdd::access::TpcStream m_tpcStreams[MaxTpcStreams];
 };

@@ -2,7 +2,7 @@
 
 /* ---------------------------------------------------------------------- *//*!
  *
- *  @file     reader.cc
+ *  @file     PdReaderTest.cc
  *  @brief    Tests the PROTO-DUNE RCEs data access methods by reading and
  *            decoding a binary test file.
  *  @verbatim
@@ -26,6 +26,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.10.31 jjr Added documentation. Name -> PdReaderTest.  The 
+                  previous name, reader was too generic.
    2017.10.05 jjr Fixed error in data read.  Previously was passing the
                   the length of the data as bytes; the method expected
                   the length in terms of 64-bit words.

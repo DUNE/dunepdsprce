@@ -1,4 +1,4 @@
-# Ignore installation directory
+# Ignore installation/product directories
 install/
 export/
 binary/
@@ -39,3 +39,6 @@ binary/
 *.exe
 *.out
 *.app
+
+# MAC custom finder display files
+.DS_Store

@@ -26,6 +26,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.10.27 jjr Corrected getHeader (buf) routine. The way it was written
+                  it called itself. 
    2017.08.29 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -187,8 +189,9 @@ pdd::record::DataFragmentHeader  const *
              DataFragmentUnpack::getHeader (uint64_t const *buf)
 {   
 
-   auto const *hdr = getHeader (buf);
-   return      hdr;
+  auto const *hdr =
+        reinterpret_cast<pdd::record::DataFragmentHeader const *>(buf);
+  return      hdr;
 }
 /* ---------------------------------------------------------------------- */
 

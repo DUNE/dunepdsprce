@@ -267,7 +267,7 @@ $(filter-out $(first_goal),$(deferred_goals)):
 # are standardly available
 # ------------------------------------------------------------
 help:
-	@echo -e                                                              \
+	@echo $(ECHO_OPT)                                                     \
         "Targets are"                                                         \
       "\n"                                                                    \
       "\n    all........................ Build all targets"                   \
@@ -345,22 +345,22 @@ ifeq ($(filter $(MAKECMDGOALS),clean),clean)
 endif
 
 clean:
-	@echo -e "Start clean of package ........... $(PKG_NAME) - $(TARGET)"
-	@echo -e "    Clean files in binary dep dir.. $(pkg_depdirs_list)"
+	@echo $(ECHO_OPT) "Start clean of package ........... $(PKG_NAME) - $(TARGET)\n" \
+	                  "   Clean files in binary dep dir.. $(pkg_depdirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_depdirs))
-	@@echo -e "    Clean files in binary obj dir.. $(pkg_objdirs_list)"
+	@@echo  "    Clean files in binary obj dir.. $(pkg_objdirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_objdirs))
-	@@echo -e "    Clean files in export lib dir.. $(pkg_libdirs_list)"
+	@@echo  "    Clean files in export lib dir.. $(pkg_libdirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_libdirs))
-	@@echo -e "    Clean files in export bin dir.. $(pkg_bindirs_list)"
+	@@echo  "    Clean files in export bin dir.. $(pkg_bindirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_bindirs))
-	@echo  -e "    Clean files in build  inc dir.. $(call pkg_blddir,$(PKG_BLD_INCDIR))"
+	@echo   "    Clean files in build  inc dir.. $(call pkg_blddir,$(PKG_BLD_INCDIR))"
 	@rm -rf $(addsuffix /*,$(PKG_BLD_INCDIR))
-	@@echo -e "    Clean files in build  lib dir.. $(call buildlist,$(call pkg_blddir,$(files_lib)))"
+	@@echo "    Clean files in build  lib dir.. $(call buildlist,$(call pkg_blddir,$(files_lib)))"
 	@rm -rf $(files_lib)
-	@@echo -e "    Clean files in build  bin dir.. $(call buildlist,$(call pkg_blddir,$(files_bin)))"
+	@@echo  "    Clean files in build  bin dir.. $(call buildlist,$(call pkg_blddir,$(files_bin)))"
 	@rm -rf $(file_bin)
-	@echo  -e "End   clean of project ........... $(PKG_NAME) - $(TARGET)\n"
+	@echo   "End   clean of project ........... $(PKG_NAME) - $(TARGET)\n"
 # ------------------------------------------------------------
 
 
@@ -516,6 +516,99 @@ PKG_BLD_SOS  := $(foreach s,$(SHAREABLES), $($s_BLD_SO)    $($s_BLD_SO_M) \
 
 else
 
+ifeq ($(TARGET_OS),darwin)
+# -------------------------------------------------------------------------
+#
+# Assume building dylib xx, version 1.2.3 in directory /lib/
+#
+# xx_Mmp       = 1 2 3               -- Space delimited version, temporary
+# xx_M         = 1                   -- The major version
+# xx_m         = 2                   -- The minor version
+# xx_p         = 3                   -- The patch release
+# xx_Mm        = 2.3                 -- The minor.patch values
+
+# xx_DYLIBNAME = libxx.1.dylib       -- NAME used in linking the dylib
+# xx_COMVER    = 2                   -- Compatibility version, just the minor
+# xx_CURVER    = 2                   -- Current version, just the minor
+
+# xx_DYLIB     = libxx.dylib        
+# xx_M_DYLIB   = libxx.1.dylib     
+# xx_Mm_DYLIB  = libxx.1.2.dylib 
+# xx_Mmp_DYLIB = libxx.1.2.3.dylib    
+
+
+# xx_DYLIB_Mmp = lib/xx.1.2.3.dylib -- Actual shareable image
+# -------------------------------------------------------------------------
+
+# --------------------------------------------------
+# Break the version number into its component pieces
+# --------------------------------------------------
+$(foreach s,$(SHAREABLES), $(eval $s_Mmp       := $(subst .,$(space),$($s_VERSION))))
+$(foreach s,$(SHAREABLES), $(eval $s_M         := $(word 1,$($s_Mmp))))
+$(foreach s,$(SHAREABLES), $(eval $s_m         := $(word 2,$($s_Mmp))))
+$(foreach s,$(SHAREABLES), $(eval $s_p         := $(word 3,$($s_Mmp))))
+$(foreach s,$(SHAREABLES), $(eval $s_Mm        := $($s_M).$($s_m)))
+
+# ---------------------------
+# Form the strings needed for
+#   -install_name
+#   -compatibility_version
+#   -current-version
+# ---------------------------
+$(foreach s,$(SHAREABLES), $(eval $s_DYLIBNAME := $s.$($s_M).dylib))
+$(foreach s,$(SHAREABLES), $(eval $s_COMVER    := $($s_m)))
+$(foreach s,$(SHAREABLES), $(eval $s_CURVER    := $($s_m)))
+
+# ------------------------------------------
+# Form the base names of the
+#   - unversioned dylib
+#   - major             version of the dylib
+#   - major.minor       version of the dylib
+#   - major.minor.patch version of the dylib
+# ------------------------------------------
+$(foreach s,$(SHAREABLES), $(eval $s_DYLIB     := $s.dylib))
+$(foreach s,$(SHAREABLES), $(eval $s_M_DYLIB   := $s.$($s_M).dylib))
+$(foreach s,$(SHAREABLES), $(eval $s_Mm_DYLIB  := $s.$($s_M).$($s_m).dylib))
+$(foreach s,$(SHAREABLES), $(eval $s_Mmp_DYLIB := $s.$($s_M).$($s_m).$($s_p).dylib))
+
+# ------------------------------------------------
+# Form the names of the dylib in the lib directory
+# ------------------------------------------------
+$(foreach s,$(SHAREABLES), $(eval  $s_LIB_DYLIB     := $($s_LIBDIR)/$($s_DYLIB)))
+$(foreach s,$(SHAREABLES), $(eval  $s_LIB_M_DYLIB   := $($s_LIBDIR)/$($s_M_DYLIB)))
+$(foreach s,$(SHAREABLES), $(eval  $s_LIB_Mm_DYLIB  := $($s_LIBDIR)/$($s_Mm_DYLIB)))
+$(foreach s,$(SHAREABLES), $(eval  $s_LIB_Mmp_DYLIB := $($s_LIBDIR)/$($s_Mmp_DYLIB)))
+
+
+# --------------------------------------------------
+# Form the names of the dylib in the build directory
+#  -- The name of the BLD -> install directory
+#     just haven't gotten to making this change
+# --------------------------------------------------
+$(foreach s,$(SHAREABLES), $(eval $s_BLD_DYLIB     := $(addprefix $(PKG_BLD_LIBDIR)/,\
+                                                      $($s_DYLIB))))
+$(foreach s,$(SHAREABLES), $(eval $s_BLD_M_DYLIB   := $(addprefix $(PKG_BLD_LIBDIR)/,\
+                                                      $($s_M_DYLIB))))
+$(foreach s,$(SHAREABLES), $(eval $s_BLD_Mm_DYLIB  := $(addprefix $(PKG_BLD_LIBDIR)/,\
+                                                      $($s_Mm_DYLIB))))
+$(foreach s,$(SHAREABLES), $(eval $s_BLD_Mmp_DYLIB := $(addprefix $(PKG_BLD_LIBDIR)/,\
+                                                      $($s_Mmp_DYLIB))))
+
+$(foreach x,$(EXECUTABLES), $(eval $x_BLD_EXE   := $(addprefix $(PKG_BLD_BINDIR)/,\
+                                                   $(notdir $($x_EXE)))))
+
+# ------------------------------------------------------------------------------
+# Form the list of all librarys to be exported -- these are in its lib directory
+# and those in the BLD (install) directories   -- these are in its lib directory5D
+# ------------------------------------------------------------------------------
+PKG_EXP_SOS  := $(foreach s,$(SHAREABLES),  $($s_LIB_DYLIB)    $($s_LIB_M_DYLIB)  \
+                                            $($s_LIB_Mm_DYLIB) $($s_LIB_Mmp_DYLIB))
+
+PKG_BLD_SOS  := $(foreach s,$(SHAREABLES),  $($s_BLD_DYLIB)    $($s_BLD_M_DYLIB) \
+                                            $($s_BLD_Mm_DYLIB) $($s_BLD_Mmp_DYLIB))
+
+else
+
 $(foreach s,$(SHAREABLES), $(eval $s_BASENAME := $s.so))
 $(foreach s,$(SHAREABLES), $(eval $s_SO       := $($s_LIBDIR)/$($s_BASENAME)))
 $(foreach s,$(SHAREABLES), $(eval $s_SONAME   := $($s_NAMESPACE):$($s_BASENAME)))
@@ -527,7 +620,7 @@ PKG_EXP_EXES := $(foreach x,$(EXECUTABLES), $($x_EXE))
 PKG_EXP_ROS  := $(foreach r,$(RELOCATABLES),$($r_RO))
 
 endif
-
+endif
 
 
 PKG_BLD_EXES := $(addprefix $(PKG_BLD_BINDIR)/,$(EXECUTABLES))
@@ -613,12 +706,12 @@ PKG_BLD_INCS := $(filter-out $(wildcard $(PKG_BLD_INCS)),$(PKG_BLD_INCS))
 #$(info PKG_BLD_INCDIR = $(PKG_BLD_INCDIR))
 $(PKG_BLD_INCDIR)/target : $(PKG_INCDIR)/$(PKG_NAME)//target/$(TARGET)
 	@echo "    Create build inc dir link. $(call includefile, $@)"
-	@ln -sT $^ $@
+	@ln -s $^ $@
 
 
 $(PKG_BLD_INCDIR)/% : $(PKG_INCDIR)/$(PKG_NAME)/%
 	@echo "    Create build inc link..... $(call includefile, $@)"
-	@ln -sT $^ $@
+	@ln -s $^ $@
 
 # ----------------------------------------------
 # This is an order-only rule to ensure that the
@@ -1275,6 +1368,20 @@ endef
 
 else
 
+ifeq ($(TARGET_OS),darwin)
+
+define LINK_EXE_template
+$($(1)_EXE) : | $$(dir $(1)_EXE)
+$($(1)_EXE) : $($(1)_OBJFILES) $($(1)_ROS) $($(1)_SOS)
+	@echo "    Link....................... $$(call exportfile,$$@)"
+	$(DBG_LINK_EXE)$(CXX) $$($1_LDFLAGS) $(LDFLAGS)   \
+                              $$(call _FLAGS,LOADLIBS,$1) \
+                              $$(call _FLAGS,LDLIBS,$1)   \
+                              -o $$@ $$^ 
+endef
+
+else
+
 define LINK_EXE_template
 $($(1)_EXE) : | $$(dir $(1)_EXE)
 $($(1)_EXE) : $($(1)_OBJFILES) $($(1)_ROS) $($(1)_SOS)
@@ -1286,6 +1393,7 @@ $($(1)_EXE) : $($(1)_OBJFILES) $($(1)_ROS) $($(1)_SOS)
                               -o $$@ $$^ 
 endef
 
+endif
 endif
 
 # ---------------------------------------------------------------
@@ -1301,7 +1409,7 @@ $(PKG_BLD_EXES) : $(PKG_BLD_BINDIR)/% : $(PKG_EXP_BINDIR)/% | $(dir $^)
 	@echo "    Copying.......(install).... $(call buildfile,$@)"
 	@cp $^ $@
 #@rm -f $@
-#@ln -sT $^ $@
+#@ln -s $^ $@
 #======================================================================
 
 
@@ -1314,7 +1422,7 @@ $(PKG_BLD_EXES) : $(PKG_BLD_BINDIR)/% : $(PKG_EXP_BINDIR)/% | $(dir $^)
 $(PKG_BLD_SOS) : $(PKG_BLD_LIBDIR)/% : $(PKG_EXP_LIBDIR)/% | $(dir $^)
 	@echo "    Symbolic Link..(install)... $(call buildfile,$@)"
 	@rm -f $@
-	@ln -sT $^ $@
+	@ln -s $^ $@
 # ======================================================================
 
 
@@ -1400,11 +1508,11 @@ endef
 # 
 # Defines the linker flags needed/used to build a shareable image
 # ---------------------------------------------------------------
-SO_LDFLAGS :=  -shared                                         \
-               -Wl,--hash-style=gnu                            \
-               -Wl,--no-undefined                              \
-               -Wl,--allow-shlib-undefined                     \
-               -Wl,--unresolved-symbols=ignore-in-shared-libs
+#SO_LDFLAGS :=  -shared                                         \
+#               -Wl,--hash-style=gnu                            \
+#               -Wl,--no-undefined                              \
+#               -Wl,--allow-shlib-undefined                     \
+#               -Wl,--unresolved-symbols=ignore-in-shared-libs
 # ---------------------------------------------------------------
 
 
@@ -1425,11 +1533,13 @@ SO_LDFLAGS :=  -shared                                         \
 # ---------------------------------------------------------------
 ifeq ($(TARGET_OS),linux)
 
+#$(info linux)
+
 define LINK_SO_template
 $($1_SO) $($1_SO_M) $($1_SO_Mm) : $($1_SO_Mmp)
-	@echo "    Symbolic Link..(export).... $$(call exportfile,$$@)"
+	@echo "    Symbolic Link..(export).... $$(call exportfile,$$@)""
 	@rm -f $$@
-	@ln -sT $$^ $$@
+	@ln -sT $$(notdir $$^) $$@
 $($(1)_SO_Mmp) : $($(1)_OBJFILES)
 	@echo "    Link....................... $$(call exportfile,$$@)"
 	$(DBG_LINK_SO)$(CXX) $(SO_LDFLAGS) -Wl,-soname=$($1_SONAME) \
@@ -1438,23 +1548,6 @@ $($(1)_SO_Mmp) : $($(1)_OBJFILES)
                              $$(call _FLAGS,LDLIBS,$1)              \
                              -o $$@ $$^
 endef
-
-else
-
-define LINK_SO_template
-$($(1)_SO) : $($(1)_OBJFILES)
-	@echo "    Link....................... $$(call exportfile,$$@)"
-	$(DBG_LINK_SO)$(CXX) $(SO_LDFLAGS) -Wl,-soname=$($1_SONAME) \
-                             $$($1_LDFLAGS)                         \
-                             $$(call _FLAGS,LOADLIBS,$1)            \
-                             $$(call _FLAGS,LDLIBS,$1)              \
-                             -o $$@ $$^
-endef
-
-endif
-
-# ---------------------------------------------------------------
-
 
 
 # ---------------------------------------------------------------
@@ -1480,6 +1573,104 @@ ifdef $(1)_ALIAS
 endif
 
 endef
+
+
+else
+
+ifeq ($(TARGET_OS),darwin)
+
+#$(info "darwin")
+
+define LINK_SO_template
+$($1_LIB_DYLIB) $($1_LIB_M_DYLIB) $($1_LIB_Mm_DYLIB) : $($1_LIB_Mmp_DYLIB)
+	@echo "    Symbolic Link..(export).... $$(call exportfile,$$@)"
+	@rm -f $$@
+	@ln -s $$(notdir $$^)  $$@
+$($(1)_LIB_Mmp_DYLIB) : $($(1)_OBJFILES)
+	@echo "    Link....................... $$(call exportfile,$$@)"
+	$(DBG_LINK_SO)$(CXX) $(DYLIB_LDFLAGS)                       \
+                             -dynamiclib                            \
+                             -install_name $($1_DYLIBNAME)          \
+                             -compatibility_version $($1_COMVER)    \
+                             -current_version $($1_CURVER)          \
+                             $$($1_LDFLAGS)                         \
+                             $$(call _FLAGS,LOADLIBS,$1)            \
+                             $$(call _FLAGS,LDLIBS,$1)              \
+                             -o $$@ $$^
+endef
+
+
+# ---------------------------------------------------------------
+# RULE: ALIAS_SO_template
+#
+# USAGE:
+# Produces a aliased target name (i.e. a phony target) for an
+# constituent executable.
+#
+# EXAMPLE: 
+# foo_ALIAS := foo  -- in a user's make file will produce
+#                      a phony target 'foo'allowing the user
+#                      to type 'make foo'
+#
+# NOTE:
+# The alias is defined if and only if foo_ALIAS is defined
+# ---------------------------------------------------------------
+define ALIAS_SO_template
+
+ifdef $(1)_ALIAS
+  .PHONY: $($(1)_ALIAS)
+   $($(1)_ALIAS) : $($(1)_Mmp_DYLIB) $($1_DYLIB) $($1_SO_M) $($1_Mm_DYLIB)
+endif
+
+endef
+
+
+else
+
+#$(info OTHER)
+
+define LINK_SO_template
+$($(1)_SO) : $($(1)_OBJFILES)
+	@echo "    Link....................... $$(call exportfile,$$@)"
+	$(DBG_LINK_SO)$(CXX) $(SO_LDFLAGS) -Wl,-soname=$($1_SONAME) \
+                             $$($1_LDFLAGS)                         \
+                             $$(call _FLAGS,LOADLIBS,$1)            \
+                             $$(call _FLAGS,LDLIBS,$1)              \
+                             -o $$@ $$^
+endef
+
+# ---------------------------------------------------------------
+# RULE: ALIAS_SO_template
+#
+# USAGE:
+# Produces a aliased target name (i.e. a phony target) for an
+# constituent executable.
+#
+# EXAMPLE: 
+# foo_ALIAS := foo  -- in a user's make file will produce
+#                      a phony target 'foo'allowing the user
+#                      to type 'make foo'
+#
+# NOTE:
+# The alias is defined if and only if foo_ALIAS is defined
+# ---------------------------------------------------------------
+define ALIAS_SO_template
+
+ifdef $(1)_ALIAS
+  .PHONY: $($(1)_ALIAS)
+  $($(1)_ALIAS) : $($(1)_SO_Mmp) $($1_SO) $($1_SO_M) $($1_SO_Mm)
+endif
+
+endef
+
+
+endif
+endif
+
+# ---------------------------------------------------------------
+
+
+
 # ======================================================================
 
 
@@ -1683,7 +1874,7 @@ print_objectfiles:
 	@echo $(CCOBJFILES) $(COJBFILES) | sed 's/ /\n'/g
 
 print_directories:
-	@echo  -e                                                             \
+	@echo  $(ECHO_OPT)                                                    \
                "\nPackage source root............... $(PKG_SOURCE_ROOT)"      \
                "\nPackage binary root............... $(PKG_BINARY_ROOT)"      \
                "\n Dependency directories........... $(call binarylist,       \
@@ -1705,7 +1896,7 @@ print_directories:
                "\n"
 
 print_end_of_build:
-	@echo  -e "End   build of package........ $(PRJNAME) - $(TARGET)\n" 
+	@echo  "End   build of package........ $(PRJNAME) - $(TARGET)\n" 
 
 
 print_flags:
@@ -1714,10 +1905,10 @@ print_flags:
 	@echo "CXXFLAGS: $(CXXFLAGS)"
 	@echo "LDFLAGS : $(LDFLAGS)"
 	@echo "INCLUDES: $(INCLUDES)"
-	@echo  -e "End  print goals for ......... $(PRJNAME) - $(TARGET)\n"
+	@echo "End  print goals for ......... $(PRJNAME) - $(TARGET)\n"
 
 print_tools:
-	@echo -e                             \
+	@echo $(ECHO_OPT)                    \
               "\nTools"                      \
 	      "\nC  compiler: $(CC)"         \
 	      "\nCC compiler: $(CXX)"        \

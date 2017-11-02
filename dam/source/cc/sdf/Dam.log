@@ -1,0 +1,108 @@
+# ----------------------------------------------------------------------
+# VERSION : 0.0.2
+# RELEASED: 2017.11.01
+# ----------------------------------------------------------------------
+
+Added support for builds on the MAC.  Surprisingly there were almost no
+changes because of this to the package specific (here dam) Makefile.
+These changes were due to name changes and version number updates. The
+name changes were because of a poor selection.  'reader' was just too
+generic to expose.
+
+The main activity was
+  1. Changing include file names
+     For example malloc.h does not exist on the Mac, this information
+     is present in stdlib.h.
+  2. The compiler on the Mac caught a few errors that the 6.2 compiler
+     on Linux did not. These were fixed.
+  3. memalign does is not supported.   Had to use posix_memalign.
+  
+
+Name Changes
+  1.  reader -> PdReaderTest
+  2   wibFrame_test -> PdWibFrameTest
+
+File changes
+  1. dam/access/TpcFragment.hh
+     a) Compiler complained that the class member m_df was unused.
+     This seems to be a mistake on the compiler, because it is
+     initialized in the class constructor.  Nevertheless, to make
+     progress, it has been marked with __attribute__ ((unused))
+     
+  2. dam/access/TpcRanges.hh
+     a) Marked class field member m_rsvd as unused in three different
+     classes ((TpcRangesIndices, TpcRangesTimestamps, TpcRangeWindow).
+     This field is used to pad to an integral 64-bit boundary.
+
+  3. dam/access/TpcStream.hh
+     a) Removed a commented out include file (dam/records/Data.hh"
+     b) Marked file member m_rsvd as unused.
+
+  4. dam/access/AignedAllocator.hh
+     a) Had to change malloc.h -> stdlib.h (no malloc.h on the Mac)
+     b) Had to use posix_memalign (no memalign on the Mac)
+
+  5. make/Makefile
+     a) Change so the common build is x86_64.  This covers the builds
+     for Linux and the Mac.
+     b) Set the name of the shareable suffix to .so for Linux
+        .dylib for Mac. 
+        The makeutilities should provide a function to do this so
+        that this is not in the user's Makefile
+     c) reader -> PdReaderTest
+     d) wibFrame_test -> PdWibFrameTest
+     e) Version -> 0.0.2
+     
+
+
+# ----------------------------------------------------------------------
+# VERSION : 0.0.1
+# RELEASED: 2017.10.23
+# ----------------------------------------------------------------------
+
+This comes much closer to a production release.  This is still a 0.x.x
+release meaning it is still evolving.  I am not confident that I have
+isolated the user from anticipated changes.  It may take one more round
+and a little experience.
+
+CODE ORGANIZATION
+-----------------
+The include files have been organized as follows  
+
+1. dam/ 
+   Where the includes defining the high-level interface reside.  These
+   are expected to be sufficient for most users.
+
+
+2. dam/access
+   The low-level access routines reside here. Most users will not use
+   these.  However debugging and certain diagnostic code will find these
+   useful.  The high-level interface is built on top of this interface.
+
+3. dam/records
+   The definitions of the physical data layout (except for WibFrame) 
+   reside here.  While this is still in the public include file area,
+   it is not meant to be included in user code. This is more so that 
+   outside users can see the layout.  It is subject to change whereas
+   those in dam/ and dam/access should be very stable
+
+
+SHAREABLES
+----------
+There are 3 shareables now produced
+    1. One for generic x86 64-bit architectures
+    2. One for those CPUs with AVX support
+    3. One for those CPUS with AVX2 support
+
+Currently the AVX image is the same as the generic image.  A subsequent
+release will specialize this image for AVX.
+
+SETUP SCRIPTS
+-------------
+A setup script, scripts/settings.csh or settings.sh will setup PATH
+and LD_LIBRARY_PATH to select the most efficient implementation for
+that executing platform.
+
+
+
+

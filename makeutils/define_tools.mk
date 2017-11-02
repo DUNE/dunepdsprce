@@ -1,6 +1,29 @@
-ifneq ($(HOST_OS),linux)
-   $(error ERROR:Can only compiile on linux OSs, not $(HOST))
+ifeq ($(HOST_OS),linux)
+else
+   ifeq ($(HOST_OS),darwin)
+   else
+       $(error ERROR:Can only compile on linux/darwin OSs, not $(HOST_OS))
+   endif
 endif
+
+
+# ---------------------------------------------------------------
+# SO_LDFLAGS
+# 
+# Defines the linker flags needed/used to build a shareable image
+# ---------------------------------------------------------------
+ifeq ($(HOST_OS),linux)
+   SO_LDFLAGS :=  -shared                                         \
+                  -Wl,--hash-style=gnu                            \
+                  -Wl,--no-undefined                              \
+                  -Wl,--allow-shlib-undefined                     \
+                  -Wl,--unresolved-symbols=ignore-in-shared-libs
+else
+ifeq ($(HOST_OS),darwin)
+   SO_LDFLAGS :=  -dynamiclib
+endif
+endif
+# ---------------------------------------------------------------
 
 
 ifeq ($(HOST_CPU),arm_CA9)
@@ -28,7 +51,7 @@ ifeq ($(HOST_CPU),arm_CA9)
 
 else 
 
-   ifeq ($(TARGET_CPU), arm_CA9)
+   ifeq ($(TARGET_CPU),arm_CA9)
 
       # -----------------------
       # Cross development tools
@@ -134,5 +157,3 @@ else
   endif
 
 endif
-
-BLD_PLATFORM = $(HOST)

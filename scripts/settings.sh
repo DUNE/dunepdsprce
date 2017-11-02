@@ -53,8 +53,26 @@
 # i.e the generic directory. This program will return the 'opt' string
 # appropriate for this machine.
 #
+# HISTORY
+#
+#       When  Who   What
+# ----------  ---   -----------------------------------------------------
+# 2017.10.29  jjr   On the MAC, readlink returns an empty string if the
+#                   the file is not a symbolic link.  If an empty string
+#                   is returned, the original file name is used.
+#
+# 2017.10.28  jjr   Added support for the MAC
+#                   Removed the -f on readlink, it means something very
+#                   different on the MAC. On LINUX it 'canocalizes' the
+#                   the filename.  This is not necessary, but seemed did
+#                   it because it seemed to be good form.
+#
+#                   Added -n to  suppress the newline which is only 
+#                   necessary when displaying to the terminal.
 # ----------------------------------------------------------------------
 called=${BASH_SOURCE[0]}
+
+os=`uname -s`
 
 ### ------------------------------
 ### Make sure the file was sourced
@@ -63,15 +81,17 @@ if [ $called != $0 ]; then
 
    ### ---------------------------------------
    ### Correctly called by sourcing the script
+   ### Get the absolute path to the script 
    ### ---------------------------------------
-   script_fn=`readlink -f $called`
+   if [ `uname` == Linux ]; then script_fn=`readlink -fn $called`
+   else script_fn=`perl -e "use Cwd 'abs_path'; print abs_path('$called')"`; fi
 
 else
 
    ### ---------------------------------------------------
    ### Incorrectly called by directly executing the script
    ### ---------------------------------------------------
-   echo "Error: This file must be sourced to set PATH and LD_LIBRARY_PATH"
+   echo "Error: This file must be sourced to set PATH and (DY)LD_LIBRARY_PATH"
    exit -1
 
 fi
@@ -87,8 +107,8 @@ if [ -z $1 ]; then
    ### -------------------------------------------
    script_dir=`dirname $script_fn`
    install_root=`dirname $script_dir`/install
-   # -- echo "script  file name= $script_fn"
-   # -- echo "script  dir      = $script_dir"
+   ### --- echo "script  file name= $script_fn"
+   ### --- echo "script  dir      = $script_dir"
 else
 
    ### -------------------
@@ -107,18 +127,38 @@ fi
 ### provide optimal performance
 ### ----------------------------------------------------------------
 install_path=${install_root}/`${script_dir}/installation_spec_dir.sh`
-#-- echo "install path     = ${install_path}"
-
+### --- echo "install path     = ${install_path}"
 
 ### ------------------
 ### Setup library path
 ### ------------------
-if [ -n "${LD_LIBRARY_PATH}" ]; then
-   export LD_LIBRARY_PATH=${install_path}/lib:${LD_LIBRARY_PATH}
-else
-   export LD_LIBRARY_PATH=${install_path}/lib:
-fi
+if [ ${os} == "Linux" ]; then
 
+
+   if [ -n "${LD_LIBRARY_PATH}" ]; then
+      export LD_LIBRARY_PATH=${install_path}/lib:${LD_LIBRARY_PATH}
+   else
+      export LD_LIBRARY_PATH=${install_path}/lib:
+   fi
+
+else
+
+   if [ ${os} == "Darwin" ]; then
+
+      if [ -n "${DYLD_LIBRARY_PATH}" ]; then
+          export DYLD_LIBRARY_PATH=${install_path}/lib:${DYLD_LIBRARY_PATH}
+      else
+          export DYLD_LIBRARY_PATH=${install_path}/lib:
+      fi
+
+   else
+       
+     echo "Error:: Unrecognized os = ${os}"
+     exit -1
+      
+   fi
+
+fi
 
 ### ------------------
 ### Setup binary  path

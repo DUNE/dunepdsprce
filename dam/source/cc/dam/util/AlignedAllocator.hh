@@ -39,14 +39,20 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.10.27 jjr Changes required by gcc on the MAC
+                  1) Change from memalign -> posix_memalign. No memalign
+                     on gcc on the MAC
+		  2) Added stddef.h. gcc on the MAC defines ptrdiff_t there
+                  3) Removed malloc.h.  Does not exist on the gcc on the
+                     MAC. These are defined in stdlib.h>
+
    2017.10.04 jjr Created
   
 \* ---------------------------------------------------------------------- */
 
 
 #include <stdlib.h>
-#include <malloc.h>
-
+#include <stddef.h>
 
 namespace pdd
 {
@@ -78,8 +84,9 @@ public:
 
   pointer   allocate(size_type n, const void * = 0) 
             {
-                T* t = (T*) memalign (N, n * sizeof(T));
-                return t;
+	      T* t;
+              posix_memalign ((void **)&t, N, n * sizeof(T));
+	      return t;
             }
   
   void      deallocate(void* p, size_type) 

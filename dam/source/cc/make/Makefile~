@@ -105,32 +105,27 @@ endif
 #$(info Makefile::TARGET_OPT   = $(TARGET_OPT))
 #$(info Makefile::MAKECMDGOALS  = $(MAKECMDGOALS))
 
-# -----------------------------------------
-# -- x86_64 specific constituents
-# -----------------------------------------
+# ------------------------------------------
+# -- x86_64-linux generic only constituents
+# ---------------------000000---------------
 ifeq ($(TARGET_CPU),x86_64)
-
-  ifeq ($(TARGET_OS),linux)
-      dam-lib := $(PKG_BLD_LIBDIR)/libprotodune-dam.so
-  else
-      dam-lib := $(PKG_BLD_LIBDIR)/libprotodune-dam.dylib
-  endif
+#ifeq ($(TARGET_OPT),gen)
 
   # -- Only generic stuff
 
-  PdReaderTest_SRCDIR       := $(PKG_CC_ROOT)/ptd
-  PdReaderTest_CCSRCFILES   := PdReaderTest.cc
-  PdReaderTest__CPPFLAGS    := -g
-  PdReaderTest_LDFLAGS      := $(dam-lib)
-  PdReaderTest_ALIAS        := PdReaderTest
-  EXECUTABLES               += PdReaderTest
+  reader_SRCDIR            := $(PKG_CC_ROOT)/ptd
+  reader_CCSRCFILES        := reader.cc
+  reader__CPPFLAGS         := -g
+  reader_LDFLAGS           := $(PKG_BLD_LIBDIR)/libprotodune-dam.so
+  reader_ALIAS             := reader
+  EXECUTABLES              += reader
 
-  PdWibFrameTest_SRCDIR     := $(PKG_CC_ROOT)/ptd
-  PdWibFrameTest_CCSRCFILES := PdWibFrameTest.cc
-  PdWibFrameTest__CPPFLAGS  := -g
-  PdWibFrameTest_LDFLAGS    := $(dam-lib)
-  PdWibFrameTest_ALIAS      := PdWibFrameTest
-  EXECUTABLES               += PdWibFrameTest
+  wibFrame_test_SRCDIR     := $(PKG_CC_ROOT)/ptd
+  wibFrame_test_CCSRCFILES := wibFrame_test.cc
+  wibFrame_test__CPPFLAGS  := -g
+  wibFrame_test_LDFLAGS    := $(PKG_BLD_LIBDIR)/libprotodune-dam.so
+  wibFrame_test_ALIAS      := wibFrame_test
+  EXECUTABLES              += wibFrame_test
 
 
 #  capabilities_SRCDIR      := $(PKG_CC_ROOT)/src
@@ -163,7 +158,7 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
 libprotodune-dam__CCFLAGS   := -g
 libprotodune-dam__CPPFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
-libprotodune-dam_VERSION    := 0.0.2
+libprotodune-dam_VERSION    := 0.0.1
 SHAREABLES                  += libprotodune-dam
 
 # ----------------------------------------------------------

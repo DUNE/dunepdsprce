@@ -29,6 +29,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.10.27 jjr Added __attribute ((unused)) to m_rsvd fields.  gcc on
+                  the MAC complains about unused class members.
    2017.10.23 jjr Padded the data section with 4 reserved words to be used
                   for future use. 
    2017.10.12 jjr Moved the record definition -> records/TpcStream.hh
@@ -37,7 +39,6 @@
 \* ---------------------------------------------------------------------- */
 
 #include "dam/access/Headers.hh"
-//#include "dam/records/Data.hh"    // !!! KLUDGE -- needs to be removed
 #include <cstdint>
 
 
@@ -93,7 +94,8 @@ private:
    pdd::record::TpcRanges       const   *m_ranges; /*!< Time/Packet Ranges*/
    pdd::record::TpcToc          const      *m_toc; /*!< Table of Contents */
    pdd::record::TpcPacket       const   *m_packet; /*!< The data packets  */
-   void                         const  *m_rsvd[4]; /*!< Future use        */
+   void                         const  *m_rsvd[4]  __attribute__ ((unused));
+                                                   /*!< Future use        */
 };
 /* ---------------------------------------------------------------------- */
 } /* END: namespace access                                                */

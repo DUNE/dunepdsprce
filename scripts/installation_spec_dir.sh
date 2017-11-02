@@ -36,7 +36,14 @@
 # executable along with the executable had to exist, meaning a make have
 # had to be previously peformed.
 #
+# HISTORY
+#
+#       When  Who   What
+# ----------  ---   -----------------------------------------------------
+# 2017.10.28  jjr   Added support for the MAC
+#
 # ----------------------------------------------------------------------
+
 
 
 ### -----------------------------
@@ -45,22 +52,26 @@
 machine=`uname -m`
 os=`uname -s`
 
-
 ### --------------------------------------
 ### The convention is to lower case the OS
 ### --------------------------------------
-if [ $os == "Linux" ]; then
+if [ ${os} == "Linux" ]; then
       os="linux"
+     ### ------------------------------------------------------------
+     ### Get the supported advanced options
+     ### ------------------------------------------------------------
+     ### Scan /proc/cpuinfo for the first occurance of the flags line
+     ### ------------------------------------------------------------
+    flags=`grep -m1 "^flags" /proc/cpuinfo`
+
+else 
+     if [ ${os} == "Darwin" ]; then
+          
+         os="darwin"
+         flags=`sysctl machdep.cpu.features`
+
+     fi
 fi
-
-
-### ------------------------------------------------------------
-### Get the supported advanced options
-### ------------------------------------------------------------
-### Scan /proc/cpuinfo for the first occurance of the flags line
-### ------------------------------------------------------------
-flags=`grep -m1 "^flags" /proc/cpuinfo`
-
 
 ### -------------
 ### Look for avx2
@@ -89,6 +100,5 @@ fi
 ### and return it as the value of this script
 ### ---------------------------------------------------------
 install_spec_dir=${machine}-${opt}-${os}
-echo $install_spec_dir
-
-exit 0
+echo ${install_spec_dir}
+exit   0

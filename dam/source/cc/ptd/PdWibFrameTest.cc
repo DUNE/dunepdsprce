@@ -1,3 +1,38 @@
+/* ---------------------------------------------------------------------- *//*!
+ *
+ *  @file     PdWibFrame_test.cc
+ *  @brief    Tests integrity and performance of the PROTO-DUNE RCEs data 
+ *            access methods to a raw WIB frame by generating fake frames
+ *            with a known pattern
+ *  @verbatim
+ *                               Copyright 2017
+ *                                    by
+ *
+ *                       The Board of Trustees of the
+ *                    Leland Stanford Junior University.
+ *                           All rights reserved.
+ *
+ *  @endverbatim
+ *
+\* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *\
+   
+   HISTORY
+   -------
+  
+   DATE       WHO WHAT
+   ---------- --- ---------------------------------------------------------
+   2017.10.31 jjr Added documentation. Name -> PdWibFrameTest.  The 
+                  previous name, wibFrame_test was to generic
+   2017.07.27 jjr Created
+  
+\* ---------------------------------------------------------------------- */
+
+
+
 #define __STDC_FORMAT_MACROS
 
 #include "dam/access/WibFrame.hh"
@@ -5,7 +40,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <sys/time.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <cstring>
 #include <cstdlib>
 #include <vector>
@@ -125,6 +160,15 @@ const TestPattern TestPatternSuite[2] =
 };
 
 
+/* ---------------------------------------------------------------------- */
+static void *memAlign (int alignment, unsigned int size)
+{
+  void *ptr;
+  posix_memalign (&ptr, alignment, size);
+  return ptr;
+}
+/* ---------------------------------------------------------------------- */
+
 
 /* ---------------------------------------------------------------------- */
 int main (int argc, char *const argv[])
@@ -141,9 +185,9 @@ int main (int argc, char *const argv[])
    #define NPATTERNS           (NPATTERNS_PER_TRIAL * NTRIALS)
    #define NFRAMES             (NFRAMES_PER_TRIAL   * NTRIALS)
 
-   uint16_t  *patterns = (uint16_t *)memalign (64, sizeof (*patterns) * NPATTERNS);
-   uint16_t    *dstBuf = (uint16_t *)memalign (64, sizeof (*dstBuf  ) * NPATTERNS);
-   WibFrame    *frames = (WibFrame *)memalign (64, sizeof (*frames  ) *   NFRAMES);
+   uint16_t  *patterns = (uint16_t *)memAlign (64, sizeof (*patterns) * NPATTERNS);
+   uint16_t    *dstBuf = (uint16_t *)memAlign (64, sizeof (*dstBuf  ) * NPATTERNS);
+   WibFrame    *frames = (WibFrame *)memAlign (64, sizeof (*frames  ) *   NFRAMES);
    uint16_t  *dstPtrs[NCHANNELS_PER_FRAME * NTRIALS];
       
    int            npatterns = NPATTERNS;
@@ -159,7 +203,7 @@ int main (int argc, char *const argv[])
    // -------------------------------------------------------
    for (unsigned int idx = 0; idx < sizeof (dstPtrs) / sizeof (*dstPtrs); ++idx)
    {
-      dstPtrs[idx] = (uint16_t *)memalign (64, nframes_per_trial * sizeof (*dstPtrs[idx]));
+      dstPtrs[idx] = (uint16_t *)memAlign (64, nframes_per_trial * sizeof (*dstPtrs[idx]));
       //dstPtrs[idx] = dstBuf + idx * nframes_per_trial;
    }
 

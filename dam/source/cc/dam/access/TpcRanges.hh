@@ -48,6 +48,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.10.27 jjr Added __attribute ((unused)) to m_rsvd fields.  gcc on
+                  the MAC complains about unused class members.
    2017.10.12 jjr Moved from dam/access -> dam/records
    2017.08.07 jjr Created
   
@@ -176,7 +178,7 @@ public:
 private:
    pdd::record::TpcRangesIndices const *m_indices;
    uint32_t                              m_bridge;
-   uint32_t                                m_rsvd;
+   uint32_t                                m_rsvd __attribute__ ((unused));
 
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */
@@ -212,7 +214,7 @@ public:
 private:
    pdd::record::TpcRangesTimestamps const *m_timestamps;
    uint32_t                                    m_bridge;
-   uint32_t                                      m_rsvd;
+   uint32_t                                      m_rsvd __attribute ((unused));
 
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */   
@@ -253,7 +255,7 @@ public:
 private:
    pdd::record::TpcRangesWindow const *m_window;
    uint32_t                            m_bridge;
-   uint32_t                              m_rsvd;
+   uint32_t                              m_rsvd  __attribute ((unused));
       
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */
