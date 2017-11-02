@@ -43,6 +43,13 @@
   
    DATE       WHO WHAT
    ---------- --- -------------------------------------------------------
+   2017.11.02 jjr Modified the unused in __attribute__ ((unused) to be
+                  CLASS_MEMBER_UNUSED.  clang flags unused class members
+                  as errors, but standard gcc does not and furthermore
+                  does not accept __attribute__ ((unused)) on class
+                  members.  The symbol CLASS_MEMBER_UNUSED is 
+                  perferentially defined on the compile command to be 
+                  either 'unused' or a blank string.
    2017.10.27 jjr Modified for gcc on the MAC,
                   The compiler complained that the field m_df was unused,
                   even though it does appear to be used in the constructor,
@@ -106,7 +113,7 @@ public:
 
 
 private:
-   pdd::access::DataFragment  const             &m_df __attribute ((unused));
+   pdd::access::DataFragment  const             &m_df __attribute__ ((CLASS_MEMBER_UNUSED));
    int                                     m_nstreams;
    pdd::access::TpcStream m_tpcStreams[MaxTpcStreams];
 };

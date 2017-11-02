@@ -146,6 +146,56 @@ else
        endif
      endif
 
+
+    # ---------------------------------------------------------
+    #
+    # !!! - KLUDGE - !!!
+    # 2017.11.02 --- jjr 
+    # ------------------
+    #
+    # The clang compiler on the MAC has stricter error checking
+    # than the stock gcc 6.3 compiler. In one particular case 
+    # the 'fix' is not compatiable with the standard gcc 
+    # compilers.  This is a work around.
+    #
+    # Not happy with this, it is way too ad hoc.  It also moves
+    # knowledge to this makefile making it difficult for others
+    # to use their own build system. 
+    #
+    # This particular fix addresses unused class members. 
+    # These are used to pad and reserve space in classes. 
+    # clang flags these as errors. Adding an 
+    #
+    #    __attribute__((unused))
+    #
+    # tells clang to ignore the error.  Unfortunately straight
+    # gcc does not allow this.  (I tried to make the -D
+    # to be the above string, but trying to get parens through
+    # the make rules was way too daunting, so compromised and
+    # just passed in a 'unused' or blank string.   
+    # ---------------------------------------------------------
+    ifeq ($(TARGET_OS),darwin)
+
+       # ----------------------------------------
+       # -- Check if this is the clang compiler
+       #    Note that the versioning is on stderr
+       # ----------------------------------------
+       cmp_version := $(shell $(CXX) -v 2>&1 |  grep clang)
+
+       ifneq ($(cmp_version),"")
+
+          # ------------------------------------------------
+          # This is the clang compiler, define the attribute
+          # ------------------------------------------------
+          CPPFLAGS += -DCLASS_MEMBER_UNUSED=unused
+
+       else
+          CPPFLAGS += -DCLASS_MEMBER_UNUSED= 
+       endif
+    else
+          CPPFLAGS += -DCLASS_MEMBER_UNUSED= 
+    endif
+
   else
 
      ifeq ($(TARGET_CPU),x86_32)

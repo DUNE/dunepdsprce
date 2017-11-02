@@ -14,6 +14,7 @@ To a large extent, these are the following set are needed to support being able 
 4. Formalize support for multiple versions in the **install/** directory.
 5. The setup script, currently in **scripts/settings.sh/csh** needs to have a copy placed in the **install/** directory.
 6. A method to locate the include directory for use when compiling user code is needed.  Basically something to set -I <project-include-path>. This reduces the burden on the user to knowing only where his/her **install/** directory is located.  This could be as easy as setting an environment varible (PROTO-DUNE-DAM-INC), but want to think this through a bit more.
+7. Add visibility attributes to trim the exposed symbols to the public interface.
 
 In the **dam** package
 

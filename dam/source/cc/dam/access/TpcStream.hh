@@ -29,6 +29,13 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.02 jjr Modified the unused in __attribute__ ((unused) to be
+                  CLASS_MEMBER_UNUSED.  clang flags unused class members
+                  as errors, but standard gcc does not and furthermore
+                  does not accept __attribute__ ((unused)) on class
+                  members.  The symbol CLASS_MEMBER_UNUSED is 
+                  perferentially defined on the compile command to be 
+                  either 'unused' or a blank string.
    2017.10.27 jjr Added __attribute ((unused)) to m_rsvd fields.  gcc on
                   the MAC complains about unused class members.
    2017.10.23 jjr Padded the data section with 4 reserved words to be used
@@ -64,6 +71,8 @@ namespace record {
 namespace pdd    {
 namespace access {
 
+//#undef  CLASS_MEMBER_UNUSED
+//#define CLASS_MEMBER_UNUSED
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -94,7 +103,8 @@ private:
    pdd::record::TpcRanges       const   *m_ranges; /*!< Time/Packet Ranges*/
    pdd::record::TpcToc          const      *m_toc; /*!< Table of Contents */
    pdd::record::TpcPacket       const   *m_packet; /*!< The data packets  */
-   void                         const  *m_rsvd[4]  __attribute__ ((unused));
+   void                         const  *m_rsvd[4]  
+                                       __attribute__ ((CLASS_MEMBER_UNUSED));
                                                    /*!< Future use        */
 };
 /* ---------------------------------------------------------------------- */

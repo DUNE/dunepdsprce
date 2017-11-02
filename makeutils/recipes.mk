@@ -348,19 +348,19 @@ clean:
 	@echo $(ECHO_OPT) "Start clean of package ........... $(PKG_NAME) - $(TARGET)\n" \
 	                  "   Clean files in binary dep dir.. $(pkg_depdirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_depdirs))
-	@@echo  "    Clean files in binary obj dir.. $(pkg_objdirs_list)"
+	@echo $(ECHO_OPT) "    Clean files in binary obj dir.. $(pkg_objdirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_objdirs))
-	@@echo  "    Clean files in export lib dir.. $(pkg_libdirs_list)"
+	@echo $(ECHO_OPT) "    Clean files in export lib dir.. $(pkg_libdirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_libdirs))
-	@@echo  "    Clean files in export bin dir.. $(pkg_bindirs_list)"
+	@echo $(ECHO_OPT) "    Clean files in export bin dir.. $(pkg_bindirs_list)"
 	@rm -rf $(addsuffix /*,$(pkg_bindirs))
-	@echo   "    Clean files in build  inc dir.. $(call pkg_blddir,$(PKG_BLD_INCDIR))"
+	@echo $(ECHO_OPT) "    Clean files in build  inc dir.. $(call pkg_blddir,$(PKG_BLD_INCDIR))"
 	@rm -rf $(addsuffix /*,$(PKG_BLD_INCDIR))
-	@@echo "    Clean files in build  lib dir.. $(call buildlist,$(call pkg_blddir,$(files_lib)))"
+	@echo $(ECHO_OPT) "    Clean files in build  lib dir.. $(call buildlist,$(call pkg_blddir,$(files_lib)))"
 	@rm -rf $(files_lib)
-	@@echo  "    Clean files in build  bin dir.. $(call buildlist,$(call pkg_blddir,$(files_bin)))"
+	@echo $(ECHO_OPT) "    Clean files in build  bin dir.. $(call buildlist,$(call pkg_blddir,$(files_bin)))"
 	@rm -rf $(file_bin)
-	@echo   "End   clean of project ........... $(PKG_NAME) - $(TARGET)\n"
+	@echo $(ECHO_OPT) "End   clean of project ........... $(PKG_NAME) - $(TARGET)\n"
 # ------------------------------------------------------------
 
 
@@ -1537,7 +1537,7 @@ ifeq ($(TARGET_OS),linux)
 
 define LINK_SO_template
 $($1_SO) $($1_SO_M) $($1_SO_Mm) : $($1_SO_Mmp)
-	@echo "    Symbolic Link..(export).... $$(call exportfile,$$@)""
+	@echo "    Symbolic Link..(export).... $$(call exportfile,$$@)"
 	@rm -f $$@
 	@ln -sT $$(notdir $$^) $$@
 $($(1)_SO_Mmp) : $($(1)_OBJFILES)
@@ -1896,7 +1896,8 @@ print_directories:
                "\n"
 
 print_end_of_build:
-	@echo  "End   build of package........ $(PRJNAME) - $(TARGET)\n" 
+	@echo $(ECHO_OPT) \
+              "End   build of package........ $(PRJNAME) - $(TARGET)\n" 
 
 
 print_flags:
