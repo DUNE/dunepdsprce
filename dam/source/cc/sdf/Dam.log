@@ -1,6 +1,6 @@
 # ----------------------------------------------------------------------
 # VERSION : 0.0.2
-# RELEASED: 2017.11.01
+# RELEASED: 2017.11.01,10
 # ----------------------------------------------------------------------
 
 Added support for builds on the MAC.  Surprisingly there were almost no
@@ -53,7 +53,10 @@ File changes
      d) wibFrame_test -> PdWibFrameTest
      e) Version -> 0.0.2
      
-
+   6) TpcPacket files
+      Replaced the misguided locateWibFrame(s) methods with a formal
+      method to locate the first WIB frame in each (nominally) 1024
+      packet.
 
 # ----------------------------------------------------------------------
 # VERSION : 0.0.1

@@ -43,6 +43,13 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.10 jjr Added a method to locate a pointer to the first WIB frame 
+                  in each (nominally) 1024 data packet.
+
+                  Removed the locateWibFrame(s) methods. These were 
+                  misguided and could not really work correctly in a 
+                  formal sense.
+
    2017.10.16 jjr Moved from dam/access -> dam/records
    2017.08.07 jjr Created
   
@@ -63,6 +70,12 @@ namespace record {
    class TpcPacket;
    class WibFrame;
 }
+
+namespace access {
+
+   class WibFrame;
+}
+
 }
 /* ====================================================================== */
 
@@ -70,7 +83,6 @@ namespace record {
 
 namespace pdd    {
 namespace access {
-
 
 /* ====================================================================== */
 /* FORWARD REFERENCES                                                     */
@@ -171,17 +183,17 @@ public:
    uint32_t                                 getNbytes () const;
 
    uint64_t                   const          *getData () const;
-   pdd::record::WibFrame      const  *locateWibFrames () const;
-   pdd::record::WibFrame      const  *locateWibFrame  (int idx) const;
+
+   pdd::access::WibFrame        const  
+           *getWibFrames (unsigned int type,
+                          unsigned int o64) const;
+
+   static pdd::access::WibFrame const  
+           *getWibFrames (pdd::record::TpcPacketBody const *body,
+                          unsigned int                      type,
+                          unsigned int                      o64);
 
    static unsigned int getPacketReserved ();
-
-   static pdd::record::WibFrame const 
-         *locateWibFrames (pdd::record::TpcPacketBody const *body);
-
-   static pdd::record::WibFrame const 
-         *locateWibFrame  (pdd::record::TpcPacketBody const *body,
-                           int                                idx);
 
 private:
    pdd::record::TpcPacketBody const *m_body;
@@ -245,15 +257,14 @@ public:
    // Access to TpcPacketBody  elements
    // ---------------------------------
    uint64_t                     const *getData   () const;
-   pdd::record::WibFrame        const *locateWibFrames () const;
-   pdd::record::WibFrame        const *locateWibFrame  (int idx) const;
+   pdd::access::WibFrame        const *getWibFrames    (unsigned int type,
+                                                        unsigned int  o64) const;
 
-   static pdd::record::WibFrame const * 
-                locateWibFrames (pdd::record::TpcPacket const *packet);
+   static pdd::access::WibFrame const * 
+                    getWibFrames (pdd::record::TpcPacket const *packet,
+                                  unsigned int                    type,
+                                  unsigned int                     o64);
 
-   static pdd::record::WibFrame const *
-                 locateWibFrame  (pdd::record::TpcPacket const *packet,
-                                  int                             idx);
    // ------------------------------------------------------------------
 
 private:
@@ -496,29 +507,18 @@ inline uint64_t const *TpcPacketBody::getData () const
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief Return a pointer to the first Wib Frame
+  \brief Return a pointer to the first Wib Frame at the specified offset
+
+  \param[in] type The packet type
+  \param[in]  o64 The 64-bit word offset.  This would usually come from
+                  the Table of Contents.
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline pdd::record::WibFrame const *
-       TpcPacketBody::locateWibFrames () const
+inline pdd::access::WibFrame const *
+TpcPacketBody::getWibFrames (unsigned int type,
+                             unsigned int o64) const
 {
-   return TpcPacketBody::locateWibFrames (m_body);
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief Return a pointer to the specified Wib Frame
-
-  \param[in] idx The index of the desired WibFrame
-                                                                          */
-/* ---------------------------------------------------------------------- */
-inline pdd::record::WibFrame const *
-       TpcPacketBody::locateWibFrame (int idx) const
-{
-   return TpcPacketBody::locateWibFrame (m_body, idx);
+   return TpcPacketBody::getWibFrames (m_body, type, o64);
 }
 /* ---------------------------------------------------------------------- */
 /* END: TpcPacketBody                                                     */
@@ -630,26 +630,16 @@ inline uint64_t const *TpcPacket::getData () const
 /* ---------------------------------------------------------------------- *//*!
 
   \brief Return a pointer to the first Wib Frame
+
+  \param[in]  o64 The 64-bit word offset.  This would usually come from
+                  the Table of Contents.
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline pdd::record::WibFrame const *TpcPacket::locateWibFrames () const
+inline pdd::access::WibFrame const 
+     *TpcPacket::getWibFrames (unsigned int type, 
+                               unsigned int o64) const
 {
-   return locateWibFrames (m_packet);
-}
-/* ---------------------------------------------------------------------- */
-
-
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief Return a pointer to the specified Wib Frame
-
-  \param[in] idx The index of the desired WibFrame
-                                                                          */
-/* ---------------------------------------------------------------------- */
-inline pdd::record::WibFrame const *
-       TpcPacket::locateWibFrame (int idx) const
-{
-   return locateWibFrame (m_packet, idx);
+   return getWibFrames (m_packet, type, o64);
 }
 /* ---------------------------------------------------------------------- */
 /* END: TpcPacket                                                         */

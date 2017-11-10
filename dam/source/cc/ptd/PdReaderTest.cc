@@ -26,6 +26,15 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2107.11.10 jjr Corrected an error causing the pointer to the ADCs in
+                  the TpcPacket record body to be incorrect.  This was
+                  because of a rather informal method of calculating the
+                  pointer. This was replaced by a more formal method that
+                  was added to the TpcPacket class.
+
+                  There was also some tweaking of the output format in
+                  an attempt to make it more useful and easier to read.
+
    2017.10.31 jjr Added documentation. Name -> PdReaderTest.  The 
                   previous name, reader was too generic.
    2017.10.05 jjr Fixed error in data read.  Previously was passing the
@@ -205,7 +214,14 @@ static void processFragment (uint64_t const *buf)
          for (int istream = 0; istream < nstreams; ++istream)
          {
             TpcStreamUnpack const *tpcStream = tpcFragment.getStream (istream);
+
+            printf ("\nTpcStream: %d/%d  -- using high level access methods\n", 
+                    istream, nstreams);
             process    (tpcStream);
+
+
+            printf ("\nTpcStream: %d/%d -- using low  level access methods\n",
+                    istream, nstreams);
             processRaw (tpcStream);
          }
       }
@@ -265,8 +281,8 @@ static void process (TpcStreamUnpack const *tpcStream)
    int  adcNBytes = adcCnt    * sizeof (uint16_t);
    uint16_t *adcs = reinterpret_cast <decltype (adcs)>(malloc (adcNBytes));
 
-   printf ("Transposing data: allocated %u bytes @ %p\n", 
-           adcNBytes, (void *)adcs);
+   //printf ("Transposing data: allocated %u bytes @ %p\n", 
+   //        adcNBytes, (void *)adcs);
 
    tpcStream->getMultiChannelData (adcs);
 
@@ -340,6 +356,14 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
 
    TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
    TpcStream const        &stream = tpcStream->getStream ();
+   int                  nchannels = tpcStream->getNChannels ();
+
+   printf ("TpcStream: %1d.%1d.%1d  # channels = %4d\n",
+           id.getCrate (),
+           id.getSlot  (),
+           id.getFiber (),
+           nchannels);
+
 
    // -----------------------
    // Construct the accessors
@@ -347,13 +371,8 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
    TpcRanges        ranges (stream.getRanges ());
    TpcToc           toc    (stream.getToc    ());
    TpcPacket        pktRec (stream.getPacket ());
-   uint64_t const  *pkts  = pktRec.getData   ();
-
-
-   printf ("TpcStream: %1d.%1d.%1d\n",
-           id.getCrate (),
-           id.getSlot  (),
-           id.getFiber ());
+   TpcPacketBody    pktBdy (pktRec.getRecord ());
+   uint64_t const  *pkts  = pktBdy.getData    ();
 
    ranges.print ();
    toc   .print ();
@@ -380,8 +399,12 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
               ipkt, pktType,
               ptr[0], ptr[1], ptr[2]);
 
-
-      WibFrame const *wf = reinterpret_cast<decltype(wf)>(ptr);
+      // -----------------------------------------------------------------
+      // Locate the WibFrames
+      // This is really cheating, since the raw wib frame is exposed to
+      // the user.  All others accessors hid the underlying implemenation.
+      // -----------------------------------------------------------------
+      WibFrame const *wf = pktBdy.getWibFrames (pktType, o64);
 
 
       for (unsigned iwf = 0; iwf < 4; ++iwf)
@@ -406,7 +429,7 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          auto cvt1 = colddata[1].getConvertCount ();
          
          puts   (
-        "  Wf  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
+        "Wf #  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
         "---- -- -- ------------- ------- -------- ---------------- ---- ----");
          
          printf (
@@ -458,15 +481,19 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
             uint16_t adcs[WibColdData::NAdcs];
             cd.expandAdcs64x1 (adcs, packedAdcs);
 
-            for (unsigned iadc = 0; iadc < WibColdData::NAdcs; iadc += 8)
+            for (unsigned iadc = 0; iadc < WibColdData::NAdcs; iadc += 16)
             {
                printf (
                "Chn%2x:"
                " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
+               " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
+               " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
                " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 "\n",
                iadc,  
                adcs[iadc + 0], adcs[iadc + 1], adcs[iadc + 2], adcs[iadc + 3],
-               adcs[iadc + 4], adcs[iadc + 5], adcs[iadc + 6], adcs[iadc + 7]);
+               adcs[iadc + 4], adcs[iadc + 5], adcs[iadc + 6], adcs[iadc + 7],
+               adcs[iadc + 8], adcs[iadc + 9], adcs[iadc +10], adcs[iadc +11],
+               adcs[iadc +12], adcs[iadc +13], adcs[iadc +14], adcs[iadc +15]);
             }
          }
          putchar ('\n');

@@ -44,6 +44,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.10 jjr Changed the definition of m_w64 to be m_w64[1]. It was
+                  incorrectly defined as a uint64_t const *.
    2017.10.16 jjr Moved from dam/access -> dam/records
    2017.08.07 jjr Created
   
@@ -153,7 +155,7 @@ private:
    TpcPacketBody () = delete;
 
 public:
-   uint64_t const *m_64;  /*!< Pointer to the record body                 */
+   uint64_t const m_w64[1]; /*!< The record body                          */
 
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */

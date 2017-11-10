@@ -45,6 +45,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.10 jjr Added a method to locate a pointer to the first WIB frame 
+                  in each (nominally) 1024 data packet.
    2017.08.07 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -194,34 +196,20 @@ TpcPacketBody::TpcPacketBody (pdd::record::TpcPacket const *packet) :
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief Locate the array of WibFrames
+  \brief Get the array of WibFrames
 
   \param[in] body Pointer to the Tpc Packet record body
+  \param[in] type The packet type
+  \param[in] o64  The 64-bit word offset.  This would usually come from
+                  the Table of Contents.
                                                                           */
 /* ---------------------------------------------------------------------- */
-TPCPACKET_IMPL pdd::record::WibFrame const *
-TpcPacketBody::locateWibFrames (pdd::record::TpcPacketBody const *body)
+TPCPACKET_IMPL pdd::access::WibFrame const *
+   TpcPacketBody::getWibFrames (pdd::record::TpcPacketBody const *body,
+                                unsigned int                      type,
+                                unsigned int                       o64)
 {
-   return reinterpret_cast<pdd::record::WibFrame const *>(body);
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief Locate the specified WibFrame
- 
-
-  \param[in] body Pointer to the Tpc Packet record body
-  \param[in]  idx Which WibFrame to locate.
-                                                                          */
-/* ---------------------------------------------------------------------- */
-TPCPACKET_IMPL pdd::record::WibFrame const *
- TpcPacketBody::locateWibFrame  (pdd::record::TpcPacketBody const *body,
-                                 int                                idx)
-{
-   return &locateWibFrames (body)[idx];
+   return reinterpret_cast<pdd::access::WibFrame const *>(body->m_w64 + o64);
 }
 /* ---------------------------------------------------------------------- */
 /* END: TpcPacketBody                                                     */
@@ -296,41 +284,6 @@ TpcPacket::getPacketReserved (pdd::record::TpcPacket const *packet)
 {
    pdd::record::TpcPacketHeader const *hdr = packet;
    return       TpcPacketHeader::getPacketReserved (hdr);
-}
-/* ---------------------------------------------------------------------- */
-
-
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief Locate the array of WibFrames
-
-  \param[in] body Pointer to the Tpc Packet record body
-                                                                          */
-/* ---------------------------------------------------------------------- */
-TPCPACKET_IMPL pdd::record::WibFrame const *
-TpcPacket::locateWibFrames (pdd::record::TpcPacket const *packet)
-{
-   return reinterpret_cast<pdd::record::WibFrame const *>
-                          (TpcPacket::getBody (packet));
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief Locate the specified WibFrame
- 
-
-  \param[in] body Pointer to the Tpc Packet record body
-  \param[in]  idx Which WibFrame to locate.
-                                                                          */
-/* ---------------------------------------------------------------------- */
-TPCPACKET_IMPL pdd::record::WibFrame const *
-TpcPacket::locateWibFrame  (pdd::record::TpcPacket const *packet,
-                                   int                          idx)
-{
-   return &locateWibFrames (packet)[idx];
 }
 /* ---------------------------------------------------------------------- */
 /*   END: TpcPacket                                                       */
