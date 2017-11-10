@@ -154,7 +154,7 @@ int main (int argc, char *const argv[])
    }
 
 
-   fprintf (stderr, "Closing\n");
+   printf ("Closing\n");
    reader.close ();
                
    return 0;

@@ -29,6 +29,9 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.10 jjr Replaced fprintf to stderr to printf.  Using less, a
+                  common thing to do, causes the output to be intermingled
+                  making it hard to read.
    2017.10.05 jjr Added in data reader to ensure all the data gets read.
    2017.07.27 jjr Created
   
@@ -125,16 +128,14 @@ inline void Reader::report (int err)
 {
    if (err)
    {
-      fprintf (stderr,
-               "Error : could not open file: %s\n"
+      printf ("Error : could not open file: %s\n"
                "Reason: %d -> %s\n", 
                m_filename,
                err, strerror (err));
    }
    else
    {
-      fprintf (stderr,
-               "Processing: %s\n", 
+      printf ("Processing: %s\n", 
                m_filename);
    }
 }
@@ -162,8 +163,7 @@ inline ssize_t Reader::read (HeaderFragmentUnpack *header)
    {
       if (nbytes == 0) return 0;
       
-      fprintf (stderr, 
-               "Error: reading header\n"
+      printf ("Error: reading header\n"
                "       returned %d bytes, should have returned %d errno = %d\n",
                (int)nbytes, (int)sizeof (*header), errno);
    }
@@ -200,16 +200,15 @@ inline ssize_t Reader::read (uint64_t *data, int n64, ssize_t nbytes)
          {
             if (nbytes < 0)
             {
-               fprintf (stderr, 
-                        "Error: reading data\n"
-                        "       returned %d bytes, should have returned %d errno = %d\n",
+               printf ("Error: reading data\n"
+                       "       returned %d bytes, should have returned %d errno = %d\n",
                         (int)nbytes, toRead, errno);
             }
 
             return nbytes;
          }
 
-         printf ("Read again left = %u\n", left);
+         //printf ("Read again left = %u\n", left);
 
          // More to read
          left -= nbytes;
