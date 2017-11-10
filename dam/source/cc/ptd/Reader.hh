@@ -29,6 +29,9 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.10 jjr Added some error checking to look for corrupt records.
+                  These would be records that have a length less than
+                  the size of there header.
    2017.11.10 jjr Replaced fprintf to stderr to printf.  Using less, a
                   common thing to do, causes the output to be intermingled
                   making it hard to read.
@@ -185,8 +188,18 @@ inline ssize_t Reader::read (HeaderFragmentUnpack *header)
 /* ---------------------------------------------------------------------- */
 inline ssize_t Reader::read (uint64_t *data, int n64, ssize_t nbytes)
 {
-   unsigned toRead = n64 * sizeof (uint64_t ) - nbytes;
+   ssize_t recSize = n64 * sizeof (uint64_t);
+   if (recSize < nbytes)
+   {
+      printf ("Error: Record size %u < header size (%u)\n"
+              "       This generally indicates a corrupt record\n",
+              (unsigned)recSize, (unsigned)nbytes);
+      return -1;
+   }
+
+   unsigned toRead = recSize - nbytes;
    unsigned left   = toRead;
+
 
    uint8_t *buf =  reinterpret_cast<decltype (buf)>(data)  + nbytes;
    while (1)
@@ -201,7 +214,7 @@ inline ssize_t Reader::read (uint64_t *data, int n64, ssize_t nbytes)
             if (nbytes < 0)
             {
                printf ("Error: reading data\n"
-                       "       returned %d bytes, should have returned %d errno = %d\n",
+                       "       returned %d bytes, should have returned %u errno = %d\n",
                         (int)nbytes, toRead, errno);
             }
 

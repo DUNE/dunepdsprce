@@ -26,7 +26,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
-   2107.11.10 jjr Corrected an error causing the pointer to the ADCs in
+   2017.11.10 jjr Check for bad record read. 
+   2017.11.10 jjr Corrected an error causing the pointer to the ADCs in
                   the TpcPacket record body to be incorrect.  This was
                   because of a rather informal method of calculating the
                   pointer. This was replaced by a more formal method that
@@ -148,7 +149,12 @@ int main (int argc, char *const argv[])
       // and read the body of the data fragment.
       // ----------------------------------------------------
       uint64_t n64 = header->getN64 ();
-      reader.read (buf, n64, nbytes);
+      ssize_t nread = reader.read (buf, n64, nbytes);
+      if (nread <= 0)
+      {
+         printf ("Error: Incomplete or corrupted record\n");
+         break;
+      }
 
       processFragment (buf);
    }
