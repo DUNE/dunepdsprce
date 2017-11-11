@@ -165,12 +165,14 @@ public:
    unsigned int                             getType () const;
    uint32_t                             getOffset64 () const;
    bool                                  isWibFrame () const;
+   unsigned int                       getNWibFrames () const;
 
 
-   static unsigned int getFormat (pdd::record::TpcTocPacketDsc const *dsc);
-   static unsigned int   getType (pdd::record::TpcTocPacketDsc const *dsc);
-   static uint32_t   getOffset64 (pdd::record::TpcTocPacketDsc const *dsc);
-   static bool        isWibFrame (pdd::record::TpcTocPacketDsc const *dsc);
+   static unsigned int     getFormat (pdd::record::TpcTocPacketDsc const *dsc);
+   static unsigned int       getType (pdd::record::TpcTocPacketDsc const *dsc);
+   static uint32_t       getOffset64 (pdd::record::TpcTocPacketDsc const *dsc);
+   static bool            isWibFrame (pdd::record::TpcTocPacketDsc const *dsc);
+   static unsigned int getNWibFrames (pdd::record::TpcTocPacketDsc const *dsc);
 
 
    static unsigned int getFormat (pdd::record::TpcTocPacketDsc dsc);
@@ -505,6 +507,17 @@ inline bool TpcTocPacketDsc::isWibFrame () const
    return isWibFrame (m_dsc);
 }
 /* ---------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Returns the number of WIB frames in this packet
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline unsigned int TpcTocPacketDsc::getNWibFrames () const
+{
+   return getNWibFrames (m_dsc);
+}
 /* END: TpcTocPacketDsc                                                   */
 /* ====================================================================== */
 

@@ -46,6 +46,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.10 jjr Add getNWibFrames to return the number of WibFrames in
+                  a packet.
    2017.08.07 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -53,6 +55,7 @@
 
 #include "dam/access/TpcToc.hh"
 #include "dam/records/TpcToc.hh"
+#include "dam/records/WibFrame.hh"
 
 
 namespace pdd    {
@@ -420,6 +423,27 @@ TPCTOC_IMPL bool
 TpcTocPacketDsc::isWibFrame (pdd::record::TpcTocPacketDsc const *dsc)
 {
    return isWibFrame (*dsc);
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Returns the number of frames for this data packet
+  \return The number of frames
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCTOC_IMPL unsigned int 
+TpcTocPacketDsc::getNWibFrames (pdd::record::TpcTocPacketDsc const *dsc)
+{
+   unsigned int o64_beg = getOffset64 (dsc[0]);
+   unsigned int o64_end = getOffset64 (dsc[1]);
+
+   unsigned int nframes = (o64_end - o64_beg) 
+                        / (sizeof (pdd::record::WibFrame) /sizeof (uint64_t));
+                        
+   return nframes;
 }
 /* ---------------------------------------------------------------------- */
 /*   END: TpcPacketDsc                                                    */

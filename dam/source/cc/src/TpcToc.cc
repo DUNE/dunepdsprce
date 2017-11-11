@@ -126,6 +126,9 @@ void TpcTocBody::print (pdd::record::TpcTocBody const *body, uint32_t bridge)
    unsigned                     o64 = TpcTocPacketDsc::getOffset64 (dsc);
 
 
+   // Header
+   puts ("            Idx. F.T  Off64  Len64   RawDsc"); 
+
    // --------------------------------------------
    // Iterate over the packets in this contributor
    // --------------------------------------------
@@ -146,7 +149,7 @@ void TpcTocBody::print (pdd::record::TpcTocBody const *body, uint32_t bridge)
       // -----------------------------------------------
       if (idsc == ndscs)
       {
-         printf ("           %2d. %1.x.%1.1x %6.6x Terminator\n", 
+         printf ("             %2d. %1.1x.%1.1x %6.6x Terminator\n", 
                  idsc, 
                  format,
                  type,
@@ -156,7 +159,7 @@ void TpcTocBody::print (pdd::record::TpcTocBody const *body, uint32_t bridge)
 
 
       unsigned int  n64 = o64 - offset64;
-      printf ("           %2d. %1.x.%1.1x %6.6x %6.6x %8.8" PRIx32 "\n", 
+      printf ("             %2d. %1.1x.%1.1x %6.6x %6.6x %8.8" PRIx32 "\n", 
               idsc, 
               format,
               type,

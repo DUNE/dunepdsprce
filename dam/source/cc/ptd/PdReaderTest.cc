@@ -399,10 +399,12 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          printf ("Have Wib frames\n");
       }
 
+      int nWibFrames = pktDsc.getNWibFrames ();
+
       uint64_t const *ptr = pkts + o64;
-      printf ("Packet[%2u:%1u] = "
+      printf ("Packet[%2u:%1u.%4d] = "
               " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n",
-              ipkt, pktType,
+              ipkt, pktType, nWibFrames,
               ptr[0], ptr[1], ptr[2]);
 
       // -----------------------------------------------------------------

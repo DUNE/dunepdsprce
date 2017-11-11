@@ -1,6 +1,6 @@
 # ----------------------------------------------------------------------
 # VERSION : 0.0.2
-# RELEASED: 2017.11.01,10
+# RELEASED: 2017.11.10
 # ----------------------------------------------------------------------
 
 Added support for builds on the MAC.  Surprisingly there were almost no
@@ -53,10 +53,16 @@ File changes
      d) wibFrame_test -> PdWibFrameTest
      e) Version -> 0.0.2
      
-   6) TpcPacket files
-      Replaced the misguided locateWibFrame(s) methods with a formal
-      method to locate the first WIB frame in each (nominally) 1024
-      packet.
+ 6. TpcPacket files
+     Replaced the misguided locateWibFrame(s) methods with a formal
+     method to locate the first WIB frame in each (nominally) 1024
+     packet.
+
+ 7. TpcToc
+    Added a method to get the number of WibFrames in each packet.
+    Of course, one must verify that the data packets are WibFrames.
+    Nominally this number is 1024, but this method insulates the 
+    user from changes.
 
 # ----------------------------------------------------------------------
 # VERSION : 0.0.1
