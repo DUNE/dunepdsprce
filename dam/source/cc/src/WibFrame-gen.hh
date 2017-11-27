@@ -40,9 +40,20 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.27 pt  Inherited from WibFrameImpl class.
    2017.09.20 jjr Separated from WibFrame.cc
 
 \* ---------------------------------------------------------------------- */
+
+#include "WibFrame-Impl.hh"
+
+namespace pdd {
+namespace access {
+
+class WibFrameGeneric: public WibFrameImpl
+{
+
+public:
 
 
 
@@ -52,7 +63,7 @@
          the generic implementation
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void expandAdcs16_init_kernel ()
+void expandAdcs16_init_kernel () final
 {
    return;
 }
@@ -116,8 +127,8 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
   \param[in] src  The source address
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline void expandAdcs64x1_kernel (uint16_t       *dst, 
-                                   uint64_t const *src)
+void expandAdcs64x1_kernel (uint16_t       *dst, 
+                            uint64_t const *src) final
 {
    expandAdcs16x1_kernel (dst+0*16, src+0*3);
    expandAdcs16x1_kernel (dst+1*16, src+1*3);
@@ -381,9 +392,9 @@ static void transposeAdcs16x4_kernel (uint64_t      *dst64,
   \param[ in]        src  The data source
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8_kernel (uint16_t       *dst, 
-                                             int      ndstStride,
-                                             uint64_t const *src)
+void transposeAdcs16x8_kernel (uint16_t       *dst, 
+                               int      ndstStride,
+                               uint64_t const *src) final
 {
    uint64_t  *dst64 = (uint64_t *)dst;
    int ndstStride64 = ndstStride * sizeof (*dst) / sizeof (*dst64);
@@ -603,9 +614,9 @@ static void transposeAdcs16x4_kernel (uint64_t *const *dst64,
   \param[ in]     src  The data source
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8_kernel (uint16_t *const *dst, 
-                                             int           offset, 
-                                             uint64_t const  *src)
+void transposeAdcs16x8_kernel (uint16_t *const *dst, 
+                               int           offset, 
+                               uint64_t const  *src) final
 {
    uint64_t *const *dst64 = (uint64_t *const *)dst;
 
@@ -616,5 +627,8 @@ static inline void transposeAdcs16x8_kernel (uint16_t *const *dst,
    return;
 }
 /* ---------------------------------------------------------------------- */
-
+};/* END: IMPLEMENTATION: class WibFrameAvx2                              */
+} /* END: namespace access                                                */
+} /* END: namespace pdd                                                   */
+/* ====================================================================== */
 #endif

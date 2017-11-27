@@ -37,6 +37,7 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.27 pt  Added runtime AVX2 support.
    2017.10.05 jjr Added transposeAdcs128xN. These are methods that optimize
                   the transpose for an arbitrary number of frames.  
                   NOTE: Current implementation still limits this to
@@ -55,69 +56,40 @@
 #include <cinttypes>
 #include <cstdio>
 
+#include <memory>
+#include "WibFrame-avx2.hh"
+#include "WibFrame-gen.hh"
+
 
 namespace pdd    {
 namespace access {
 
+/* ---------------------------------------------------------------------- *//*!
 
-static inline void expandAdcs16_init_kernel () __attribute__ ((always_inline));
+	\brief  Runtime check for AVX2 instructions.
+			Only works for gcc + x86_64 cpu.
+																		  */
+/* ---------------------------------------------------------------------- */
+static inline std::unique_ptr<WibFrameImpl> _get_impl()
+{
+    #ifdef __x86_64
 
-// ------------------------------
-// EXPANDERS:   Contigious Memory
-// ------------------------------
-static inline void expandAdcs16x1_kernel  (uint16_t       *dst,
-                                           uint64_t const *src) __attribute__ ((always_inline));
+    __builtin_cpu_init();
 
-static inline void expandAdcs64x1_kernel  (uint16_t       *dst, 
-                                           uint64_t const *src) __attribute__ ((always_inline));
+    if (__builtin_cpu_supports("avx2"))
+    {
+        printf("Using AVX2: Yes\n");
+        return std::make_unique<WibFrameAvx2>();
+    }
 
-static inline void expandAdcs16x4_kernel  (uint16_t       *dst, 
-                                           uint64_t const *src) __attribute__ ((always_inline));
+    #endif
 
+    printf("Using AVX2: No\n");
+    return std::make_unique<WibFrameGeneric>();
 
-// ------------------------------
-// TRANSPOSERS: Contigious Memory
-// ------------------------------
-static inline void transposeAdcs16x8_kernel  (uint16_t       *dst, 
-                                              int          offset, 
-                                              uint64_t const *src) __attribute__ ((always_inline));
+}
 
-static inline void transposeAdcs16x8N_kernel (uint16_t       *dst, 
-                                              int              n8,
-                                              int          stride, 
-                                              uint64_t const *src) __attribute__ ((always_inline));
-
-static inline void transposeAdcs16x16_kernel (uint16_t       *dst, 
-                                              int          offset, 
-                                              uint64_t const *src) __attribute__ ((always_inline));
-
-static inline void transposeAdcs16x32_kernel (uint16_t       *dst, 
-                                              int          offset, 
-                                              uint64_t const *src) __attribute__ ((always_inline));
-
-
-
-// --------------------------------------
-// TRANSPOSERS: Channel-by-Channel Memory
-// --------------------------------------
-static inline void transposeAdcs16x8_kernel  (uint16_t *const *dst, 
-                                              int           offset, 
-                                              uint64_t const  *src) __attribute__ ((always_inline));
-
-static inline void transposeAdcs16x8N_kernel (uint16_t *const *dst, 
-                                              int               n8,
-                                              int           offset, 
-                                              uint64_t const  *src) __attribute__ ((always_inline));
-
-static inline void transposeAdcs16x16_kernel (uint16_t *const *dst, 
-                                              int           offset, 
-                                              uint64_t  const *src) __attribute__ ((always_inline));
-
-static inline void transposeAdcs16x32_kernel (uint16_t *const *dst, 
-                                              int           offset, 
-                                              uint64_t  const *src) __attribute__ ((always_inline));
-     
-
+static auto impl = _get_impl();
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -249,7 +221,7 @@ void WibFrame::transposeAdcs128x8N (uint16_t             *dst,
    // ---------------------------------
    // Initialize the expander registers
    // ---------------------------------
-   expandAdcs16_init_kernel ();
+   impl->expandAdcs16_init_kernel ();
 
    // ------------------------------=-----
    // Loop over the frames in groups of 8
@@ -271,11 +243,11 @@ void WibFrame::transposeAdcs128x8N (uint16_t             *dst,
          // ----------------------------------------------------------------
          // Transpose the cold data stream 0 & 1  for 16 channels x 16 times
          // ----------------------------------------------------------------
-         transposeAdcs16x8_kernel (lcldst0, ndstStride, lclsrc0);
+         impl->transposeAdcs16x8_kernel (lcldst0, ndstStride, lclsrc0);
          lcldst0 += 16*ndstStride;
          lclsrc0 +=  3;
 
-         transposeAdcs16x8_kernel (lcldst1, ndstStride, lclsrc1);
+         impl->transposeAdcs16x8_kernel (lcldst1, ndstStride, lclsrc1);
          lcldst1 += 16*ndstStride;
          lclsrc1 +=  3;
       }
@@ -346,7 +318,7 @@ void WibFrame::transposeAdcs128x16N (uint16_t             *dst,
    // ---------------------------------
    // Initialize the expander registers
    // ---------------------------------
-   expandAdcs16_init_kernel ();
+   impl->expandAdcs16_init_kernel ();
 
    // ------------------------------=-----
    // Loop over the frames in groups of 16
@@ -368,11 +340,11 @@ void WibFrame::transposeAdcs128x16N (uint16_t             *dst,
          // ----------------------------------------------------------------
          // Transpose the cold data stream 0 & 1  for 16 channels x 16 times
          // ----------------------------------------------------------------
-         transposeAdcs16x16_kernel (lcldst0, ndstStride, lclsrc0);
+         impl->transposeAdcs16x16_kernel (lcldst0, ndstStride, lclsrc0);
          lcldst0 += 16*ndstStride;
          lclsrc0 +=  3;
 
-         transposeAdcs16x16_kernel (lcldst1, ndstStride, lclsrc1);
+         impl->transposeAdcs16x16_kernel (lcldst1, ndstStride, lclsrc1);
          lcldst1 += 16*ndstStride;
          lclsrc1 +=  3;
       }
@@ -439,7 +411,7 @@ void WibFrame::transposeAdcs128x32N (uint16_t             *dst,
    // ---------------------------------
    // Initialize the expander registers
    // ---------------------------------
-   expandAdcs16_init_kernel ();
+   impl->expandAdcs16_init_kernel ();
 
    // ------------------------------=-----
    // Loop over the frames in groups of 32
@@ -460,11 +432,11 @@ void WibFrame::transposeAdcs128x32N (uint16_t             *dst,
          // ----------------------------------------------------------------
          // Transpose the cold data stream 0 & 1  for 16 channels x 32 times
          // ----------------------------------------------------------------
-         transposeAdcs16x32_kernel (lcldst0, ndstStride, lclsrc0);
+         impl->transposeAdcs16x32_kernel (lcldst0, ndstStride, lclsrc0);
          lcldst0 += 16*ndstStride;
          lclsrc0 +=  3;
 
-         transposeAdcs16x32_kernel (lcldst1, ndstStride, lclsrc1);
+         impl->transposeAdcs16x32_kernel (lcldst1, ndstStride, lclsrc1);
          lcldst1 += 16*ndstStride;
          lclsrc1 +=  3;
       }
@@ -569,7 +541,7 @@ void WibFrame::transposeAdcs128x8N  (uint16_t *const  dst[128],
    // ---------------------------------
    // Initialize the expander registers
    // ---------------------------------
-   expandAdcs16_init_kernel ();
+   impl->expandAdcs16_init_kernel ();
 
 
    // ------------------------------=----
@@ -592,11 +564,11 @@ void WibFrame::transposeAdcs128x8N  (uint16_t *const  dst[128],
          // ----------------------------------------------------------------
          // Transpose the cold data stream 0 & 1  for 16 channels x 16 times
          // ----------------------------------------------------------------
-         transposeAdcs16x8_kernel  (lcldst0, offset, lclsrc0);
+         impl->transposeAdcs16x8_kernel  (lcldst0, offset, lclsrc0);
          lcldst0 += 16;
          lclsrc0 +=  3;
 
-         transposeAdcs16x8_kernel  (lcldst1, offset, lclsrc1);
+         impl->transposeAdcs16x8_kernel  (lcldst1, offset, lclsrc1);
          lcldst1 += 16;
          lclsrc1 +=  3;
       }
@@ -658,7 +630,7 @@ void WibFrame::transposeAdcs128x16N (uint16_t *const  dst[128],
    // ---------------------------------
    // Initialize the expander registers
    // ---------------------------------
-   expandAdcs16_init_kernel ();
+   impl->expandAdcs16_init_kernel ();
 
 
    // ------------------------------=-----
@@ -681,11 +653,11 @@ void WibFrame::transposeAdcs128x16N (uint16_t *const  dst[128],
          // ----------------------------------------------------------------
          // Transpose the cold data stream 0 & 1  for 16 channels x 16 times
          // ----------------------------------------------------------------
-         transposeAdcs16x16_kernel (lcldst0, offset, lclsrc0);
+         impl->transposeAdcs16x16_kernel (lcldst0, offset, lclsrc0);
          lcldst0 += 16;
          lclsrc0 +=  3;
 
-         transposeAdcs16x16_kernel (lcldst1, offset, lclsrc1);
+         impl->transposeAdcs16x16_kernel (lcldst1, offset, lclsrc1);
          lcldst1 += 16;
          lclsrc1 +=  3;
       }
@@ -749,7 +721,7 @@ void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
    // ---------------------------------
    // Initialize the expander registers
    // ---------------------------------
-   expandAdcs16_init_kernel ();
+   impl->expandAdcs16_init_kernel ();
 
    // ------------------------------=-----
    // Loop over the frames in groups of 16
@@ -771,11 +743,11 @@ void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
          // ----------------------------------------------------------------
          // Transpose the cold data stream 0 & 1  for 16 channels x 32 times
          // ----------------------------------------------------------------
-         transposeAdcs16x32_kernel (lcldst0, offset, lclsrc0);
+         impl->transposeAdcs16x32_kernel (lcldst0, offset, lclsrc0);
          lcldst0 += 16;
          lclsrc0 +=  3;
 
-         transposeAdcs16x32_kernel (lcldst1, offset, lclsrc1);
+         impl->transposeAdcs16x32_kernel (lcldst1, offset, lclsrc1);
          lcldst1 += 16;
          lclsrc1 +=  3;
       }
@@ -795,13 +767,13 @@ void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
 
 
 
-#ifdef __AVX2__
-#include "WibFrame-avx2.hh"
-#elif defined (__AVX__)
-#include "WibFrame-avx.hh"
-#else
-#include "WibFrame-gen.hh"
-#endif
+//#ifdef __AVX2__
+//#include "WibFrame-avx2.hh"
+//#elif defined (__AVX__)
+//#include "WibFrame-avx.hh"
+//#else
+//#include "WibFrame-gen.hh"
+//#endif
 
 
 /* ---------------------------------------------------------------------- *//*!
@@ -816,8 +788,8 @@ void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
 void WibColdData::expandAdcs64x1 (uint16_t             *dst,
                                   uint64_t const (&src)[12])
 {
-   expandAdcs16_init_kernel ();
-   expandAdcs64x1_kernel    (dst, reinterpret_cast<uint64_t const *>(&src));
+   impl->expandAdcs16_init_kernel ();
+   impl->expandAdcs64x1_kernel    (dst, reinterpret_cast<uint64_t const *>(&src));
 }
 /* ---------------------------------------------------------------------- */
 
@@ -825,115 +797,7 @@ void WibColdData::expandAdcs64x1 (uint16_t             *dst,
 
 
 
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief  Transpose 8N time samples for 16 channels
-
-  \param[out]   dst The destination array
-  \param[ in]    n8 The number of groups of 8 channels, \e i.e. the N in
-                    transpose16x8N
-  \param[in] offset The number of elements in on channel's destination
-                    array.
-  \param[in]    src The source array
-                                                                          */
-/* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8N_kernel (uint16_t       *dst, 
-                                              int              n8,
-                                              int          stride,
-                                              uint64_t const *src)
-{
-   for (int idx = 0; idx < n8; ++idx)
-   {
-      transposeAdcs16x8_kernel (dst, stride, src + idx * 8 * sizeof (WibFrame) / sizeof (*src));
-      dst += 8;
-   }
-
-   return;
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x16_kernel (uint16_t       *dst, 
-                                              int          stride, 
-                                              uint64_t const *src)
-{
-   transposeAdcs16x8N_kernel (dst, 2, stride, src);
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x32_kernel (uint16_t       *dst, 
-                                              int          stride, 
-                                              uint64_t const *src)
-{
-   transposeAdcs16x8N_kernel (dst, 4, stride, src);
-}
-/* ---------------------------------------------------------------------- */
-/* END: CONTIGIOUS TRANSPOSITION                                          */
-/* ====================================================================== */
-
-
-
-
-
-/* ====================================================================== */
-/* BEGIN: CHANNEL-BY-CHANNEL TRANSPOSITION                                */
-/* ---------------------------------------------------------------------- *//*!
-
-  \brief  Transpose 8N time samples for 16 channels
-
-  \param[out]   dst Pointers to 16 arrays to receive the transposed data
-  \param[ in]    n8 The number of groups of 8 channels, \e i.e. the N in
-                    transpose16x8N
-  \param[in] offset The number of elements in on channel's destination
-                    array.
-  \param[in]    src The source array
-                                                                          */
-/* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8N_kernel (uint16_t *const *dst, 
-                                              int               n8,
-                                              int           offset,
-                                              uint64_t const  *src)
-{
-   for (int idx = 0; idx < n8; ++idx)
-   {
-      transposeAdcs16x8_kernel (dst, offset, src);
-      src    += 8 * sizeof (WibFrame) / sizeof (*src);
-      offset += 8;
-   }
-
-   return;
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x16_kernel (uint16_t *const *dst, 
-                                              int           offset,
-                                              uint64_t const  *src)
-{
-   transposeAdcs16x8N_kernel (dst, 2, offset, src);
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-/* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x32_kernel (uint16_t *const *dst, 
-                                              int           offset, 
-                                              uint64_t const  *src)
-{
-   transposeAdcs16x8N_kernel (dst, 4, offset, src);
-}
-/* ---------------------------------------------------------------------- */
-/* END: CONTIGIOUS TRANSPOSITION                                          */
-/* ====================================================================== */
 /*   END: IMPLEMENTATION: class WibFrame                                  */
 } /* END: namespace access                                                */
-} /* END: namespace pdd                                                   */
-/* ====================================================================== */
+} /* END: namespace pdd                                                   i
+/m ====================================================================== */

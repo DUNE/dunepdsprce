@@ -40,16 +40,26 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.11.27 pt  Inherited from WibFrameImpl class.
    2017.09.20 jjr Separated from WibFrame.cc
 
 \* ---------------------------------------------------------------------- */
 
+#include "WibFrame-Impl.hh"
+
+namespace pdd {
+namespace access {
+
+class WibFrameAvx2 : public WibFrameImpl
+{
+
+public:
 
 #define STRIDE sizeof (WibFrame)
 
 
 /* ---------------------------------------------------------------------- */
-static void print (char const *what, uint64_t d[4]) __attribute__ ((unused));
+//static void print (char const *what, uint64_t d[4]) __attribute__ ((unused));
 static void print (char const *what, uint64_t d[4])
 {
    printf ("%-15.15s %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n", 
@@ -66,7 +76,7 @@ static void print (char const *what, uint64_t d[4])
   \brief Initializes the ymm15 with the necessary shuffle pattern
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void expandAdcs16_init_kernel ()
+void expandAdcs16_init_kernel ()  final
 {
 
    /* Each entry indicates where the src byte comes from in the destination */
@@ -250,8 +260,8 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
    by expancAdcs_init to do the initial shuffle
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void expandAdcs64x1_kernel (uint16_t       *dst, 
-                                          uint64_t const *src)
+void expandAdcs64x1_kernel (uint16_t       *dst, 
+                                          uint64_t const *src) final
 {
    uint8_t const *s8 =  reinterpret_cast<decltype (s8)>(src);
 
@@ -412,8 +422,8 @@ static inline void expandAdcs16x4_kernel (uint16_t       *dst,
    by expancAdcs_init to do the initial shuffle
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void expandAdcs64x1_kernel (uint16_t       *dst, 
-                                          uint64_t const *src)
+void expandAdcs64x1_kernel (uint16_t       *dst, 
+                                          uint64_t const *src) final
 {
    expandAdcs16x1_kernel (dst+0*16, src+0*3);
    expandAdcs16x1_kernel (dst+1*16, src+1*3);
@@ -532,9 +542,9 @@ static inline void expandAdcs16x8N_kernel (uint16_t        *buf,
 
 
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8_kernel (uint16_t         *dst, 
-                                             int            stride, 
-                                             uint64_t const *src64)
+inline void transposeAdcs16x8_kernel (uint16_t         *dst, 
+                                      int            stride, 
+                                      uint64_t const *src64) final
 {
    uint16_t src[16*8] __attribute__ ((aligned (64)));
 
@@ -847,9 +857,9 @@ static inline void transposeAdcs16x8_kernel (uint16_t         *dst,
 
 
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8_kernel (uint16_t *const  *dst, 
-                                             int            offset, 
-                                             uint64_t const *src64)
+void transposeAdcs16x8_kernel (uint16_t *const  *dst, 
+                               int            offset, 
+                               uint64_t const *src64) final
 {
    uint16_t src[16*8] __attribute__ ((aligned (32)));
 
@@ -1009,4 +1019,8 @@ static inline void transposeAdcs16x8_kernel (uint16_t *const  *dst,
 
 }
 /* ---------------------------------------------------------------------- */
+};/* END: IMPLEMENTATION: class WibFrameAvx2                              */
+} /* END: namespace access                                                */
+} /* END: namespace pdd                                                   */
+/* ====================================================================== */
 #endif
