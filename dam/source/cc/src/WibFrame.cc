@@ -60,33 +60,50 @@
 #include "WibFrame-avx2.hh"
 #include "WibFrame-gen.hh"
 
+#ifdef __x86_64
+#include "cpuid.h"
+#endif
 
 namespace pdd    {
 namespace access {
 
 /* ---------------------------------------------------------------------- *//*!
 
-	\brief  Runtime check for AVX2 instructions.
-			Only works for gcc + x86_64 cpu.
+	\brief  Runtime detection for AVX2.
 																		  */
 /* ---------------------------------------------------------------------- */
 static inline std::unique_ptr<WibFrameImpl> _get_impl()
 {
-    #ifdef __x86_64
 
+// Check AVX2 for x86_64 arch
+#ifdef __x86_64
+    bool has_avx2 = false;
+
+// This check should work for GCC as well.
+#if defined(__clang__)
+    uint32_t vendor;
+    uint32_t max_level = __get_cpuid_max (0, &vendor);
+    if (max_level >= 12)
+    {
+        uint32_t eax, ebx, ecx, edx;
+        __cpuid_count (7, 0, eax, ebx, ecx, edx);
+        has_avx2 = ebx & 0x20;
+    }
+// Using GCC macro
+#elif defined(__GNUC__) || defined(__GNUG__)
     __builtin_cpu_init();
+    has_avx2 = __builtin_cpu_supports("avx2");
 
-    if (__builtin_cpu_supports("avx2"))
+#endif
+    if (has_avx2) 
     {
         printf("Using AVX2: Yes\n");
         return std::make_unique<WibFrameAvx2>();
     }
-
-    #endif
+#endif
 
     printf("Using AVX2: No\n");
     return std::make_unique<WibFrameGeneric>();
-
 }
 
 static auto impl = _get_impl();
