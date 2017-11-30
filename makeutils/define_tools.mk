@@ -182,12 +182,12 @@ else
        # ----------------------------------------
        cmp_version := $(shell $(CXX) -v 2>&1 |  grep clang)
 
-	// ---------------------------------------------------
-	// 2017.11.30 -- jjr
-	// Change the test for an empty string from ,"") -< ,)
-        // per Tom Junks request. I guess this is the correct
-        // way to test for an empty string.
-        // ---------------------------------------------------
+	# ---------------------------------------------------
+	# 2017.11.30 -- jjr
+	# Change the test for an empty string from ,"") -< ,)
+        # per Tom Junks request. I guess this is the correct
+        # way to test for an empty string.
+        # ---------------------------------------------------
        ifneq ($(cmp_version),)
 
           # ------------------------------------------------
