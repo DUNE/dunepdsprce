@@ -18,6 +18,9 @@
 #
 #     DATE   WHO WHAT
 # ---------- --- ----------------------------------------------------------- 
+# 2017.11.30 jjr Bump version.  The code did not change, but there was a
+#                correction to the makeutil/define_tool.mk to correctly
+#                handle an empty string (which was only on Mac builds).
 # 2017.07.27 jjr Created
 #
 # ======================================================================
@@ -163,7 +166,7 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
 libprotodune-dam__CCFLAGS   := -g
 libprotodune-dam__CPPFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
-libprotodune-dam_VERSION    := 0.0.2
+libprotodune-dam_VERSION    := 0.0.3
 SHAREABLES                  += libprotodune-dam
 
 # ----------------------------------------------------------

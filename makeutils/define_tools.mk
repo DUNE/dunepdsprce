@@ -182,7 +182,13 @@ else
        # ----------------------------------------
        cmp_version := $(shell $(CXX) -v 2>&1 |  grep clang)
 
-       ifneq ($(cmp_version),"")
+	// ---------------------------------------------------
+	// 2017.11.30 -- jjr
+	// Change the test for an empty string from ,"") -< ,)
+        // per Tom Junks request. I guess this is the correct
+        // way to test for an empty string.
+        // ---------------------------------------------------
+       ifneq ($(cmp_version),)
 
           # ------------------------------------------------
           # This is the clang compiler, define the attribute

@@ -386,7 +386,8 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
 
    int   npkts = toc.getNPacketDscs ();
 
-
+   uint64_t  predicted = 0;
+   unsigned int errCnt = 0;
    for (int ipkt = 0; ipkt < npkts; ++ipkt)
    {
       TpcTocPacketDsc pktDsc (toc.getPacketDsc (ipkt));
@@ -399,7 +400,7 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          printf ("Have Wib frames\n");
       }
 
-      int nWibFrames = pktDsc.getNWibFrames ();
+      unsigned nWibFrames = pktDsc.getNWibFrames ();
 
       uint64_t const *ptr = pkts + o64;
       printf ("Packet[%2u:%1u.%4d] = "
@@ -415,7 +416,7 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
       WibFrame const *wf = pktBdy.getWibFrames (pktType, o64);
 
 
-      for (unsigned iwf = 0; iwf < 4; ++iwf)
+      for (unsigned iwf = 0; iwf < nWibFrames; ++iwf)
       {
          auto hdr       = wf->getHeader ();
          auto commaChar = wf->getCommaChar (hdr);
@@ -427,6 +428,14 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          auto reserved  = wf->getReserved  (hdr);
          auto wiberrors = wf->getWibErrors (hdr);
          auto timestamp = wf->getTimestamp ();
+
+         if (timestamp != predicted)
+         {
+            errCnt += 1;
+            printf ("Error %2d.%3d @ %4d %16.16" PRIx64 " != %16.16" PRIx64 "\n", 
+                    errCnt, ipkt, iwf, timestamp, predicted);
+         }
+         predicted = timestamp + 25;
 
          // ----------------------------------------------------------
          // The const & are necessary to make sure this is a reference

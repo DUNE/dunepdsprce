@@ -1,4 +1,16 @@
 # ----------------------------------------------------------------------
+# VERSION : 0.0.3
+# RELEASED: 2017.11.30
+# ----------------------------------------------------------------------
+
+Minor changes
+   1. Add some additional checking to PdReaderTest
+      This really needs to be formalized as a utility rather than as
+      a means of checking the interface code.
+   2. Fixed a minor error in define_tools.mk to correctly check for an
+      empty string.
+
+# ----------------------------------------------------------------------
 # VERSION : 0.0.2
 # RELEASED: 2017.11.10
 # ----------------------------------------------------------------------
