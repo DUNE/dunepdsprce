@@ -5,7 +5,7 @@ binary/
 
 # Temporay saved files
 *.*-sav
-
+*~
 
 # Prerequisites
 *.d

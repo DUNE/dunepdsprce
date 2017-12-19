@@ -1,4 +1,43 @@
 # ----------------------------------------------------------------------
+# VERSION : 0.0.4
+# RELEASED: 2017.12.19
+# ----------------------------------------------------------------------
+
+Eliminate use of CLASS_UNUSED_MEMBER
+------------------------------------
+Modified so that the #define CLASS_UNUSED_MEMBER is no longer required.
+This was eliminated in
+   1) dam/access/TpcFragment.hh
+   2) dam/access/TpcRanges.hh
+   3) dam/access/TpcStream.hh
+
+In doing so eliminated the setting of this in CPPFLAGS  from
+  1) makeutils/define_tool.mk
+
+The method is a bit kludgy.  A inline private method was defined that
+accessed the unused class member.  Given that it is an inline and private
+it will not generate any code, so except for adding noise (why is this
+thing here) it is beign.
+
+This is currently only a problem with the clang compiler, which seems to
+have better error checking that gcc 6.3. But, there is no reason in the
+future that gcc will not declare this an error also.
+
+An interesting side note.  I initially added the methods to the class,
+but, due to an oversight, provided no implementation.  However, clang
+ceased to complain, even though the field member was still unused. A
+little investigating seemed to reveal that placing an implemented method
+in the class suppressed the unused field member error.  So one unused
+method seems to mask the unused field member error.  (Two wrongs make
+a right?) This has got to be a compiler mistake. 
+
+
+Add exclusion of *~ files
+--------------------------
+Modified .gitignore to ignore *~ files.
+
+
+# ----------------------------------------------------------------------
 # VERSION : 0.0.3
 # RELEASED: 2017.11.30
 # ----------------------------------------------------------------------
