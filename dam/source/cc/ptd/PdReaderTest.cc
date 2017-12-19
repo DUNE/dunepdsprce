@@ -26,6 +26,9 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.12.19 jjr Removed error message that checked to timestamp 
+                  mismatches on the first WIB frame. There is no prediction
+                  on the first frame, so there was an extraneous message.
    2017.11.10 jjr Check for bad record read. 
    2017.11.10 jjr Corrected an error causing the pointer to the ADCs in
                   the TpcPacket record body to be incorrect.  This was
@@ -400,7 +403,7 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          printf ("Have Wib frames\n");
       }
 
-      unsigned nWibFrames = pktDsc.getNWibFrames ();
+      unsigned¯ nWibFrames = pktDsc.getNWibFrames ();
 
       uint64_t const *ptr = pkts + o64;
       printf ("Packet[%2u:%1u.%4d] = "
@@ -429,7 +432,7 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          auto wiberrors = wf->getWibErrors (hdr);
          auto timestamp = wf->getTimestamp ();
 
-         if (timestamp != predicted)
+         if (timestamp != predicted && (predicted != 0))
          {
             errCnt += 1;
             printf ("Error %2d.%3d @ %4d %16.16" PRIx64 " != %16.16" PRIx64 "\n", 
