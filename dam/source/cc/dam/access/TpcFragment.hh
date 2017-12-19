@@ -43,6 +43,8 @@
   
    DATE       WHO WHAT
    ---------- --- -------------------------------------------------------
+   2017.12.19 jjr Removed the need for specifying a class member as unused
+                  by somewhat artificially using it.
    2017.11.02 jjr Modified the unused in __attribute__ ((unused) to be
                   CLASS_MEMBER_UNUSED.  clang flags unused class members
                   as errors, but standard gcc does not and furthermore
@@ -107,16 +109,42 @@ public:
    TpcFragment (pdd::access::DataFragment const &fragment);
 
 public:
-   void                          print       ()            const; 
-   int                           getNStreams ()            const;
-   pdd::access::TpcStream const *getStream   (int istream) const;
-
+   void                             print           ()            const; 
+   int                              getNStreams     ()            const;
+   pdd::access::TpcStream    const *getStream       (int istream) const;
+   pdd::access::DataFragment const &getDataFragment ()            const;
 
 private:
-   pdd::access::DataFragment  const             &m_df __attribute__ ((CLASS_MEMBER_UNUSED));
+  pdd::access::DataFragment  const              &m_df;
    int                                     m_nstreams;
    pdd::access::TpcStream m_tpcStreams[MaxTpcStreams];
 };
+/* ---------------------------------------------------------------------- */
+} /* END: namespace access                                                */
+/* ---------------------------------------------------------------------- */
+} /* END: namespace pdd                                                   */
+/* ====================================================================== */
+
+
+
+
+
+
+/* ====================================================================== */
+/* IMPLEMENTATION: TpcFragment                                            */
+/* ---------------------------------------------------------------------- */
+namespace pdd    {
+namespace access {
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Returns a constant reference to the parent DataFragment
+  \return A constant reference to the parent DataFragment
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline pdd::access::DataFragment const &TpcFragment::getDataFragment () const
+{
+  return m_df;
+}
 /* ---------------------------------------------------------------------- */
 /* CLASS: TpcFragment                                                     */
 /* ---------------------------------------------------------------------- */

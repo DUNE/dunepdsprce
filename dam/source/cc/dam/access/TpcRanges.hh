@@ -48,6 +48,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.12.19 jjr Removed the need for specifying a class member as unused
+                  by somewhat artificially using it.
    2017.11.02 jjr Modified the unused in __attribute__ ((unused) to be
                   CLASS_MEMBER_UNUSED.  clang flags unused class members
                   as errors, but standard gcc does not and furthermore
@@ -183,11 +185,12 @@ public:
    static int getOffset (uint32_t index);
 
 private:
+   uint32_t getReserved () const;
+
+private:
    pdd::record::TpcRangesIndices const *m_indices;
    uint32_t                              m_bridge;
-   uint32_t                                m_rsvd
-            __attribute__ ((CLASS_MEMBER_UNUSED));
-
+   uint32_t                                m_rsvd;
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */
 
@@ -220,10 +223,13 @@ public:
                uint32_t                                    bridge);
 
 private:
+   uint32_t getReserved () const;
+
+private:
    pdd::record::TpcRangesTimestamps const *m_timestamps;
    uint32_t                                    m_bridge;
-   uint32_t                                      m_rsvd 
-                   __attribute__ ((CLASS_MEMBER_UNUSED));
+   uint32_t                                      m_rsvd;
+ 
 
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */   
@@ -262,10 +268,12 @@ public:
                                uint32_t                            bridge);
 
 private:
+   uint32_t getReserved () const;
+
+private:
    pdd::record::TpcRangesWindow const *m_window;
    uint32_t                            m_bridge;
-   uint32_t                              m_rsvd 
-          __attribute__ ((CLASS_MEMBER_UNUSED));
+   uint32_t                              m_rsvd;
       
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */
@@ -401,10 +409,8 @@ private:
 /* ====================================================================== */
 /* IMPLEMENTATION                                                         */
 /* ---------------------------------------------------------------------- */
-
 namespace pdd    {
 namespace access {
-
 /* ====================================================================== */
 /* IMPLEMENTATION: TpcRangesBridge                                        */
 /* ---------------------------------------------------------------------- *//*!
@@ -722,6 +728,23 @@ inline uint32_t TpcRangesIndices::getTrigger () const
    return getTrigger (m_indices, m_bridge);
 }
 /* ---------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Return the reserved field of Tpc Indices
+
+  \note
+   This is provided for completeness and diagnostic/debugging purposes.
+   Also service to keep the clang compiler from complaining about an
+   unused class member.  (Somewhat of a kludge.)
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline uint32_t TpcRangesIndices::getReserved () const
+{
+   return m_rsvd;
+}
+/* ---------------------------------------------------------------------- */
 /* END::  TpcRangesIndices                                                */
 /* ====================================================================== */
 
@@ -790,6 +813,23 @@ inline uint64_t TpcRangesTimestamps::getEnd () const
    return getEnd (m_timestamps, m_bridge);
 }
 /* ---------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Return the reserved field of TpcRangesTimestamp
+
+  \note
+   This is provided for completeness and diagnostic/debugging purposes.
+   Also service to keep the clang compiler from complaining about an
+   unused class member.  (Somewhat of a kludge.)
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline uint32_t TpcRangesTimestamps::getReserved () const
+{
+   return m_rsvd;
+}
+/* ---------------------------------------------------------------------- */
 /* END: TpcRangesTimestamps                                               */
 /* ====================================================================== */
 
@@ -854,6 +894,23 @@ inline uint64_t TpcRangesWindow::getEnd () const
 inline uint64_t TpcRangesWindow::getTrigger () const
 {
    return getTrigger (m_window, m_bridge);
+}
+/* ---------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Return the reserved field of TpcRangesWindow
+
+  \note
+   This is provided for completeness and diagnostic/debugging purposes.
+   Also service to keep the clang compiler from complaining about an
+   unused class member.  (Somewhat of a kludge.)
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline uint32_t TpcRangesWindow::getReserved () const
+{
+   return m_rsvd;
 }
 /* ---------------------------------------------------------------------- */
 /*   END: TpcRangeWindow                                                  */

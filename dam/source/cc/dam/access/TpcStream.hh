@@ -29,6 +29,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2017.12.19 jjr Removed the need for specifying a class member as unused
+                  by somewhat artificially using it.
    2017.11.02 jjr Modified the unused in __attribute__ ((unused) to be
                   CLASS_MEMBER_UNUSED.  clang flags unused class members
                   as errors, but standard gcc does not and furthermore
@@ -71,8 +73,6 @@ namespace record {
 namespace pdd    {
 namespace access {
 
-//#undef  CLASS_MEMBER_UNUSED
-//#define CLASS_MEMBER_UNUSED
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -95,7 +95,10 @@ public:
    pdd::record::TpcToc          const *getToc    () const;
    pdd::record::TpcPacket       const *getPacket () const;
    int                                 getLeft   () const;
-   uint32_t                            getCsf    () const;          
+   uint32_t                            getCsf    () const;
+
+private:
+   void                         const *getReserved (int idx) const;
 
 
 private:
@@ -103,9 +106,7 @@ private:
    pdd::record::TpcRanges       const   *m_ranges; /*!< Time/Packet Ranges*/
    pdd::record::TpcToc          const      *m_toc; /*!< Table of Contents */
    pdd::record::TpcPacket       const   *m_packet; /*!< The data packets  */
-   void                         const  *m_rsvd[4]  
-                                       __attribute__ ((CLASS_MEMBER_UNUSED));
-                                                   /*!< Future use        */
+   void                         const  *m_rsvd[4]; /*!< Future use        */
 };
 /* ---------------------------------------------------------------------- */
 } /* END: namespace access                                                */
@@ -139,6 +140,9 @@ inline pdd::record::TpcToc          const *TpcStream::getToc    () const
 
 inline pdd::record::TpcPacket       const *TpcStream::getPacket () const
  { return  m_packet; }
+
+inline void                      const  *TpcStream::getReserved (int idx) const
+{ return m_rsvd[idx]; }
 /* ---------------------------------------------------------------------- */
 } /* END: namespace access                                                */
 /* ---------------------------------------------------------------------- */
