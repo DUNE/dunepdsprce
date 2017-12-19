@@ -164,7 +164,7 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
                                WibFrame.cc
 
 libprotodune-dam__CCFLAGS   := -g
-libprotodune-dam__CPPFLAGS  := -g
+libprotodune-dam__CXXFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
 libprotodune-dam_VERSION    := 0.0.3
 SHAREABLES                  += libprotodune-dam

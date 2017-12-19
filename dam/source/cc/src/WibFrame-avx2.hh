@@ -60,7 +60,6 @@ static void print (char const *what, uint64_t d[4])
 
 
 
-
 /* ---------------------------------------------------------------------- *//*!
 
   \brief Initializes the ymm15 with the necessary shuffle pattern
@@ -73,10 +72,10 @@ static inline void expandAdcs16_init_kernel ()
    static uint8_t const Shuffle0[16] __attribute__ ((aligned (64))) = 
    {
    //    0     1     2     3     4     5     6     7
-      0x00, 0x01, 0x02, 0x80, 0x03, 0x04, 0x05, 0x80,
+      0x00, 0x02, 0x01, 0x03, 0x02, 0x04, 0x03, 0x05,
 
     //   8     9     a     b     c     d     e     f
-      0x06, 0x07, 0x08, 0x80, 0x09, 0x0a, 0x0b, 0x80
+      0x06, 0x08, 0x07, 0x09, 0x08, 0x0a, 0x09, 0x0b
    };
 
 
@@ -114,9 +113,9 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
 
    /* 
 
-        7      6      5      4       3      2      1      0
-     ----   ----   ---- | ----    ----   ----   ----   ----
-                   7776 | 6655 || 5444 | 3332 | 2211 | 1000  A
+     f   e  d  c  b  a  9  8  7  6  5  4  3  2  1  0
+     -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+                             hg ed cb 98 a6 73 54 21   -> .cba.987.654.321
 
    */
 
@@ -127,31 +126,18 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
 
    /* 
     | This describes the bit twiddling in the following instructions.
-    | Only the lower 128 bits are shown, containing ADCS 0 - 7.
-    | The upper 128 bits are  identical, containing ADCS 8 - F
-    |
-    | The goal is to divide the data into groups of 6 bytes in each of the 8 32-bit words
-    | This is done using the vpshufb instruction to move these groups of 6 bytes
-    | Each group of 32 begins with a byte of 0s and 2 12-bit.  
-    | A nibble must be insert between these two.  
-    | The brute force way works of just shifting them within a 32-bit word works best.
-    |
-    |
-    |    7      6      5      4       3      2      1      0
-    | ---- | ---- | ---- | ----    ----   ----   ----   ----
-    |               7776 | 6655 || 5444 | 3332 | 2211 | 1000  ymm3  vmovupd + vinsert ymm3
-    | zz77 | 7666 | zz55 | 5444 || zz33 | 3222 | zz11 | 1000  ymm3  vpshuf ymm0,ymm3,ymm3
-    |
-    | 666z | zzzz | 444z | zzzz || 222z | zzzz | 000z | zzzz  vpslld 20,ymm3,ymm4
-    | zzzz | z777 | zzzz | z555 || zzzz | z333 | zzzz | z111  vpsrld 12,ymm3,ymm5
-
-    | zzzz | z666 | zzzz | z444 || zzzz | z222 | zzzz | z000  vpsrld 20,ymm4,ymm4
-    | z777 | zzzz | z555 | zzzz || z333 | zzzz | z111 | zzzz  vpsrld 16,ymm3,ymm5
-    |
-    | z777 | z666 | z555 | z444 || z333 | z222 | z111 | z000  vpor   ymm3,ymm4,ymm3
-    |
+    | Only the lower 64 bits are shown, containing ADCS 0 - 4.
+    | The input pattern repeats every 48 bits
+    | 
+    |   7  6 |  5  4 |  3  2 |  1  0
+    |  -- -- + -- -- + -- -- | -- --
+    |  hg ed | cb 98 | a6 73 | 54 21    Initial load
+    |  cb a6 | 98 73 | a6 54 | 73 21    vpshufb  ymm15,ymm3,ymm3
+    |  ba 6. | 87 3. | 65 4. | 32 1.    vpsllw   $4,ymm3,$ymm4
+    |  cb a6 | 98 73 | 65 4. | 32 1.    vpblendd $0x55,ymm4,ymm3,ymm3
+    |  .c ba | .9 87 | .6 54 | .3 21    vpsrlw   $4,ymm4,ymm3,ymm3
+    |  .c ba | .9 87 | .6 54 | .3 21    vmovupd  ymm3
    */
-   //asm ("vmovupd     %0,%%ymm3"             :: "m"(s8[0])  : "%ymm3");
    asm ("vinserti128 $0,%0,%%ymm3,%%ymm3"   :: "m"(s8[0]) : "%ymm3");
    asm ("vinserti128 $1,%0,%%ymm3,%%ymm3"   :: "m"(s8[12]) : "%ymm3");
 
@@ -177,8 +163,9 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
    /* ----- END DEBUG ---- */
 
 
-   asm ("vpslld      $5*4,%%ymm3,%%ymm4"    ::             : "%ymm4");
-   asm ("vpsrld      $3*4,%%ymm3,%%ymm3"    ::             : "%ymm3");
+   asm ("vpsllw      $4,%%ymm3,%%ymm4"       ::             : "%ymm4");
+   asm ("vpblendd    $0x55,$ymm4,$ymm3,$ymm3"::             : "%ymm3");
+
 
    /* ----- DEBUG ---- */
    #if      DEBUG
@@ -194,32 +181,18 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
    /* ----- END DEBUG ---- */
 
 
-   asm ("vpsrld      $5*4,%%ymm4,%%ymm4"   ::             : "%ymm4");
-   asm ("vpslld      $4*4,%%ymm3,%%ymm3"   ::             : "%ymm3");
+   asm ("vpsrlw      $4,%%ymm3,%%ymm3"       ::             : "%ymm3");
 
    /* ----- DEBUG ---- */
    #if      DEBUG
-   asm ("vmovupd     %%ymm4,%0"            : "=m"(Dbg[4][0])  :: "memory");
    asm ("vmovupd     %%ymm3,%0"            : "=m"(Dbg[3][0])  :: "memory");
 
-   print ("Ymm4 >> 5:", Dbg[4]);
    print ("Ymm3 << 4:", Dbg[3]);
 
    asm ("vmovupd     %0,%%ymm3"            :: "m"(Dbg[3][0])  : "%ymm3");
-   asm ("vmovupd     %0,%%ymm4"            :: "m"(Dbg[4][0])  : "%ymm4");
    #endif
    /* ----- END DEBUG ---- */
 
-   asm ("vpor        %%ymm3,%%ymm4,%%ymm3" ::             : "%ymm3");
-
-
-   /* ----- DEBUG ---- */
-   #if      DEBUG
-   asm ("vmovupd     %%ymm3,%0"            : "=m"(Dbg[3][0])  :: "memory");
-   print ("Ymm3 or:", Dbg[3]);
-   asm ("vmovupd     %0,%%ymm3"            :: "m"(Dbg[3][0])  : "%ymm3");
-   #endif
-   /* ----- END DEBUG ---- */
 
 
    /* Store the result */
@@ -236,6 +209,7 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
 /* ---------------------------------------------------------------------- */
 
 
+
 #if 1
 /* ---------------------------------------------------------------------- *//*!
 
@@ -247,7 +221,7 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
 
   \warning
    This routine assumes that the SIMD register ymm15 is initialized
-   by expancAdcs_init to do the initial shuffle
+   by expaNCADCS_init to do the initial shuffle
                                                                           */
 /* ---------------------------------------------------------------------- */
 static inline void expandAdcs64x1_kernel (uint16_t       *dst, 
@@ -255,57 +229,44 @@ static inline void expandAdcs64x1_kernel (uint16_t       *dst,
 {
    uint8_t const *s8 =  reinterpret_cast<decltype (s8)>(src);
 
-   #if      DEBUG
-   uint64_t Dbg[16][4];
-   #endif
+   //uint64_t *s64 = const_cast<decltype (s64)>(src);
+   //s64[0] = 0x1fedcb98a6735421LL;
 
 
-   //asm ("vmovupd     %0,%%ymm0"             :: "m"(s8[0*24])    : "%ymm0" );
-   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"   :: "m"(s8[0*24])    : "%ymm0" );
-   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"   :: "m"(s8[0*24+12]) : "%ymm0" );
-   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0" ::                  : "%ymm0" );
-   asm ("vpslld      $5*4,%%ymm0,%%ymm14"   ::                  : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm0,%%ymm0"    ::                  : "%ymm0" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                  : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm0,%%ymm0"    ::                  : "%ymm0" );
-   asm ("vpor        %%ymm0,%%ymm14,%%ymm0" ::                  : "%ymm0" );
-   asm ("vmovupd     %%ymm0,%0"             : "=m"(dst[0*16])   :: "memory");
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"     :: "m"(s8[0*24])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"     :: "m"(s8[0*24+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0"   ::                  :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"        ::                  :  "%ymm1");
+   asm ("vpblendd  $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"        ::                  :  "%ymm0");
+   asm ("vmovupd     %%ymm0,%0"               : "=m"(dst[0*16])  :: "memory");
 
 
-   //asm ("vmovupd     %0,%%ymm1"             :: "m"(s8[1*24])    : "%ymm2" );
-   asm ("vinserti128 $0,%0,%%ymm1,%%ymm1"   :: "m"(s8[1*24])    : "%ymm2" );
-   asm ("vinserti128 $1,%0,%%ymm1,%%ymm1"   :: "m"(s8[1*24+12]) : "%ymm2" );
-   asm ("vpshufb     %%ymm15,%%ymm1,%%ymm1" ::                  : "%ymm1" );
-   asm ("vpslld      $5*4,%%ymm1,%%ymm14"   ::                  : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm1,%%ymm1"    ::                  : "%ymm1" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                  : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm1,%%ymm1"    ::                  : "%ymm1" );
-   asm ("vpor        %%ymm1,%%ymm14,%%ymm1" ::                  : "%ymm1" );
-   asm ("vmovupd     %%ymm1,%0"             : "=m"(dst[1*16])   :: "memory");
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"     :: "m"(s8[1*24])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"     :: "m"(s8[1*24+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0"   ::                  :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"        ::                  :  "%ymm1");
+   asm ("vpblendd  $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"        ::                  :  "%ymm0");
+   asm ("vmovupd     %%ymm0,%0"               : "=m"(dst[1*16])  :: "memory");
 
 
-        //asm ("vmovupd     %0,%%ymm2"             :: "m"(s8[2*24])    : "%ymm2" );
-   asm ("vinserti128 $0,%0,%%ymm2,%%ymm2"   :: "m"(s8[2*24])    : "%ymm2" );
-   asm ("vinserti128 $1,%0,%%ymm2,%%ymm2"   :: "m"(s8[2*24+12]) : "%ymm2" );
-   asm ("vpshufb     %%ymm15,%%ymm2,%%ymm2" ::                  : "%ymm2" );
-   asm ("vpslld      $5*4,%%ymm2,%%ymm14"   ::                  : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm2,%%ymm2"    ::                  : "%ymm2" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                  : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm2,%%ymm2"    ::                  : "%ymm2" );
-   asm ("vpor        %%ymm2,%%ymm14,%%ymm2" ::                  : "%ymm2" );
-   asm ("vmovupd     %%ymm2,%0"             : "=m"(dst[2*16])   :: "memory");
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"     :: "m"(s8[2*24])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"     :: "m"(s8[2*24+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0"   ::                  :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"        ::                  :  "%ymm1");
+   asm ("vpblendd  $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"        ::                  :  "%ymm0");
+   asm ("vmovupd     %%ymm0,%0"                : "=m"(dst[2*16])  :: "memory");
 
 
-   //asm ("vmovupd     %0,%%ymm3"             :: "m"(s8[3*24])    : "%ymm3" );
-   asm ("vinserti128 $0,%0,%%ymm3,%%ymm3"   :: "m"(s8[3*24])    : "%ymm3" );
-   asm ("vinserti128 $1,%0,%%ymm3,%%ymm3"   :: "m"(s8[3*24+12]) : "%ymm3" );
-   asm ("vpshufb     %%ymm15,%%ymm3,%%ymm3" ::                  : "%ymm3" );
-   asm ("vpslld      $5*4,%%ymm3,%%ymm14"   ::                  : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm3,%%ymm3"    ::                  : "%ymm3" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                  : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm3,%%ymm3"    ::                  : "%ymm3" );
-   asm ("vpor        %%ymm3,%%ymm14,%%ymm3" ::                  : "%ymm3" );
-   asm ("vmovupd     %%ymm3,%0"             : "=m"(dst[3*16])   :: "memory");
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"     :: "m"(s8[3*24])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"     :: "m"(s8[3*24+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0"   ::                  :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"        ::                  :  "%ymm1");
+   asm ("vpblendd  $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"        ::                  :  "%ymm0");
+   asm ("vmovupd     %%ymm0,%0"               : "=m"(dst[3*16])  :: "memory");
 
    return;
 }
@@ -344,52 +305,40 @@ static inline void expandAdcs16x4_kernel (uint16_t       *dst,
    */
 
 
-   //asm ("vmovupd     %0,%%ymm0"             :: "m"(s8[0*STRIDE])    : "%ymm0" );
-   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"   :: "m"(s8[0*STRIDE])    : "%ymm0" );
-   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"   :: "m"(s8[0*STRIDE+12]) : "%ymm0" );
-   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0" ::                      : "%ymm0" );
-   asm ("vpslld      $5*4,%%ymm0,%%ymm14"   ::                      : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm0,%%ymm0"    ::                      : "%ymm0" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                      : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm0,%%ymm0"    ::                      : "%ymm0" );
-   asm ("vpor        %%ymm0,%%ymm14,%%ymm0" ::                      : "%ymm0" );
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"   :: "m"(s8[0*STRIDE])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"   :: "m"(s8[0*STRIDE+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0" ::                      :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"      ::                      :  "%ymm1");
+   asm ("vpblendd    $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"      ::                      :  "%ymm0");
    asm ("vmovupd     %%ymm0,%0"             : "=m"(dst[0*16])      :: "memory");
 
 
-   //asm ("vmovupd     %0,%%ymm1"             :: "m"(s8[1*STRIDE])    : "%ymm2" );
-   asm ("vinserti128 $0,%0,%%ymm1,%%ymm1"   :: "m"(s8[1*STRIDE])    : "%ymm2" );
-   asm ("vinserti128 $1,%0,%%ymm1,%%ymm1"   :: "m"(s8[1*STRIDE+12]) : "%ymm2" );
-   asm ("vpshufb     %%ymm15,%%ymm1,%%ymm1" ::                      : "%ymm1" );
-   asm ("vpslld      $5*4,%%ymm1,%%ymm14"   ::                      : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm1,%%ymm1"    ::                      : "%ymm1" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                      : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm1,%%ymm1"    ::                      : "%ymm1" );
-   asm ("vpor        %%ymm1,%%ymm14,%%ymm1" ::                      : "%ymm1" );
-   asm ("vmovupd     %%ymm1,%0"             : "=m"(dst[1*16])      :: "memory");
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"   :: "m"(s8[1*STRIDE])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"   :: "m"(s8[1*STRIDE+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0" ::                      :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"      ::                      :  "%ymm1");
+   asm ("vpblendd    $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"      ::                      :  "%ymm0");
+   asm ("vmovupd     %%ymm0,%0"             : "=m"(dst[1*16])      :: "memory");
 
 
-   //asm ("vmovupd     %0,%%ymm2"             :: "m"(s8[2*STRIDE])    : "%ymm2" );
-   asm ("vinserti128 $0,%0,%%ymm2,%%ymm2"   :: "m"(s8[2*STRIDE])    : "%ymm2" );
-   asm ("vinserti128 $1,%0,%%ymm2,%%ymm2"   :: "m"(s8[2*STRIDE+12]) : "%ymm2" );
-   asm ("vpshufb     %%ymm15,%%ymm2,%%ymm2" ::                      : "%ymm2" );
-   asm ("vpslld      $5*4,%%ymm2,%%ymm14"   ::                      : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm2,%%ymm2"    ::                      : "%ymm2" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                      : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm2,%%ymm2"    ::                      : "%ymm2" );
-   asm ("vpor        %%ymm2,%%ymm14,%%ymm2" ::                      : "%ymm2" );
-   asm ("vmovupd     %%ymm2,%0"             : "=m"(dst[2*16])      :: "memory");
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"   :: "m"(s8[2*STRIDE])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"   :: "m"(s8[2*STRIDE+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0" ::                      :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"      ::                      :  "%ymm1");
+   asm ("vpblendd    $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"      ::                      :  "%ymm0");
+   asm ("vmovupd     %%ymm0,%0"             : "=m"(dst[2*16])      :: "memory");
 
 
-   //asm ("vmovupd     %0,%%ymm3"             :: "m"(s8[3*STRIDE])    : "%ymm3" );
-   asm ("vinserti128 $0,%0,%%ymm3,%%ymm3"   :: "m"(s8[3*STRIDE])    : "%ymm3" );
-   asm ("vinserti128 $1,%0,%%ymm3,%%ymm3"   :: "m"(s8[3*STRIDE+12]) : "%ymm3" );
-   asm ("vpshufb     %%ymm15,%%ymm3,%%ymm3" ::                      : "%ymm3" );
-   asm ("vpslld      $5*4,%%ymm3,%%ymm14"   ::                      : "%ymm14");
-   asm ("vpsrld      $3*4,%%ymm3,%%ymm3"    ::                      : "%ymm3" );
-   asm ("vpsrld      $5*4,%%ymm14,%%ymm14"  ::                      : "%ymm14");
-   asm ("vpslld      $4*4,%%ymm3,%%ymm3"    ::                      : "%ymm3" );
-   asm ("vpor        %%ymm3,%%ymm14,%%ymm3" ::                      : "%ymm3" );
-   asm ("vmovupd     %%ymm3,%0"             : "=m"(dst[3*16])      :: "memory");
+   asm ("vinserti128 $0,%0,%%ymm0,%%ymm0"   :: "m"(s8[3*STRIDE])    :  "%ymm0");
+   asm ("vinserti128 $1,%0,%%ymm0,%%ymm0"   :: "m"(s8[3*STRIDE+12]) :  "%ymm0");
+   asm ("vpshufb     %%ymm15,%%ymm0,%%ymm0" ::                      :  "%ymm0");
+   asm ("vpsllw      $4,%%ymm0,%%ymm1"      ::                      :  "%ymm1");
+   asm ("vpblendd    $0x55,%%ymm1,%%ymm0,%%ymm0"::                  :  "%ymm0");
+   asm ("vpsrlw      $4,%%ymm0,%%ymm0"      ::                      :  "%ymm0");
+   asm ("vmovupd     %%ymm0,%0"             : "=m"(dst[3*16])      :: "memory");
 
    return;
 }
@@ -576,7 +525,7 @@ static inline void transposeAdcs16x8_kernel (uint16_t         *dst,
     |  BEGIN:  FIRST SET OF 16 -> 32 bit ordering
     |
     |   ymm0 0f 0e 0d 0c 0b 0a 09 08 07 06 05 04 03 02 01 00
-    |   ymm1 1f 1f 1d 1c 1b 1a 19 18 17 16 15 14 13 12 11 10
+    |   ymm1 1f 1e 1d 1c 1b 1a 19 18 17 16 15 14 13 12 11 10
     |
     |   ymm2 1b 0b 1a 0a 19 09 18 08 13 03 12 02 11 01 10 00 
     |   ymm3 1f 0f 1e 0e 1d 0d 1c 0c 17 07 16 06 15 05 14 04
@@ -709,7 +658,7 @@ static inline void transposeAdcs16x8_kernel (uint16_t         *dst,
    asm ("vpunpckldq  %%ymm9,%%ymm7,%%ymm6" ::: "%ymm6");
    asm ("vpunpckhdq  %%ymm9,%%ymm7,%%ymm7" ::: "%ymm7");
    /*
-    |   ymm4 79 66 59 49 78 68 58 48 71 61 51 41 70 60 50 40
+    |   ymm4 79 69 59 49 78 68 58 48 71 61 51 41 70 60 50 40
     |   ymm5 7b 6b 5b 4b 7a 6a 5a 4a 73 63 53 43 72 62 52 42
     |   ymm6 7d 6d 5d 4d 7c 6c 5c 4c 75 65 55 45 74 64 54 44
     |   ymm7 7f 6f 6f 4f 7e 6e 5e 4e 77 67 57 47 76 66 56 46

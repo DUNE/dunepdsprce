@@ -75,7 +75,8 @@ static void test_integrity         (uint16_t                 *dstBuf,
                                     int                      ntrials,
                                     uint16_t const         *patterns,
                                     int          npatterns_per_trial,
-                                    int                    npatterns) __attribute__((unused));
+                                    int                    npatterns)
+                                              __attribute__((unused));
 
 static void test_performance       (uint16_t                 *dstBuf, 
                                     WibFrame         const   *frames,
@@ -83,7 +84,8 @@ static void test_performance       (uint16_t                 *dstBuf,
                                     int                      ntrials,
                                     uint16_t         const *patterns,
                                     int          npatterns_per_trial,
-                                    int                    npatterns) __attribute__((unused));
+                                    int                    npatterns) 
+                                              __attribute__((unused));
 
 
 static void test_integrityPtrArray (uint16_t       *const  *dstPtrs, 
@@ -92,7 +94,8 @@ static void test_integrityPtrArray (uint16_t       *const  *dstPtrs,
                                     int                     ntrials,
                                     uint16_t        const *patterns,
                                     int         npatterns_per_trial,
-                                    int                   npatterns) __attribute__((unused));
+                                    int                   npatterns)
+                                             __attribute__((unused));
 
 static void test_performancePtrArray (uint16_t     *const  *dstPtrs, 
                                       WibFrame      const   *frames,
@@ -100,17 +103,18 @@ static void test_performancePtrArray (uint16_t     *const  *dstPtrs,
                                       int                   ntrials,
                                       uint16_t      const *patterns,
                                       int       npatterns_per_trial,
-                                      int                 npatterns) __attribute__((unused));
+                                      int                 npatterns)
+                                             __attribute__((unused));
 
 
-static void test_integrityVector    (std::vector<TpcAdcVector> 
-                                                                   *dstVecs,
+static void test_integrityVector    (std::vector<TpcAdcVector>     *dstVecs,
                                      WibFrame               const   *frames,
                                     int                   nframes_per_trial,
                                     int                             ntrials,
                                     uint16_t                const *patterns,
                                     int                 npatterns_per_trial,
-                                    int                           npatterns) __attribute__((unused));
+                                    int                           npatterns) 
+                                                     __attribute__((unused));
 
 static void test_performanceVector  (std::vector<TpcAdcVector> 
                                                                    *dstVecs,
@@ -119,7 +123,8 @@ static void test_performanceVector  (std::vector<TpcAdcVector>
                                      int                            ntrials,
                                      uint16_t               const *patterns,
                                      int                npatterns_per_trial,
-                                     int                          npatterns) __attribute__((unused));
+                                     int                          npatterns)
+                                                     __attribute__((unused));
 
 
 static int check_expansion   (uint16_t const   *results, 
@@ -153,10 +158,10 @@ struct TestPattern
 };
 
 
-const TestPattern TestPatternSuite[2] =
+const TestPattern TestPatternSuite[] =
 {
    { "Time:Channel", create_tc     },
-   { "Random",       create_random }
+   { "Random",       create_random },
 };
 
 
@@ -203,7 +208,9 @@ int main (int argc, char *const argv[])
    // -------------------------------------------------------
    for (unsigned int idx = 0; idx < sizeof (dstPtrs) / sizeof (*dstPtrs); ++idx)
    {
-      dstPtrs[idx] = (uint16_t *)memAlign (64, nframes_per_trial * sizeof (*dstPtrs[idx]));
+      dstPtrs[idx] = (uint16_t *)memAlign (64,
+                                           nframes_per_trial 
+                                         * sizeof (*dstPtrs[idx]));
       //dstPtrs[idx] = dstBuf + idx * nframes_per_trial;
    }
 
@@ -993,6 +1000,101 @@ static void create_tc (uint16_t *patterns, int npatterns)
 /* ---------------------------------------------------------------------- */
 
 
+/*
+
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+  |2.3[7:0]|1.3[7:0]|2.2[b:4]|1.2[b.4]|2.2[3:0]|1.2[3:0]|2.1[7:0]|1.1[7:0]|
+  |                                   |2.1[b:8]|1.1[b:8]|        |        |
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+  |2.6[3:0]|1.6[3:0]|2.5[7:0]|1.5[7:0]|2.4[b:4]|1.4[b:4]|2.4[3:0]|1.4[3:0]|
+  |2.5[b:8]|1.5[b:8]|                 |        |        |2.3[b:8]|1.3[b:8]|
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+  |2.8[b:4]|1.8[b:4]|2.8[3:0]|1.8[3.0]|2.7[7:0]|1.7[7:0]|2.6[b:4]|1.6[b.4]|
+  |                 |2.7[b:8||1.7[b:8]|                                   |
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+
+
+   +--------+--------+--------+--------+--------+--------+
+   |2.2[b:4]|1.2[b.4]|2.2[3:0]|1.2[3:0]|2.1[7:0]|1.1[7:0]|
+   |                 |2.1[b:8]|1.1[b:8]|        |        |
+   +--------+--------+--------+--------+--------+--------+
+
+   +--------+--------+--------+--------+--------+--------+
+   |2.4[b:4]|1.4[b:4]|2.4[3:0]|1.4[3:0]|2.3[7:0]|1.3[7:0]|
+   |                 |2.3[b:8]|1.3[b:8]|                 |
+   +--------+--------+--------+--------+--------+--------+ 
+
+   +--------+--------+--------+--------+--------+--------+ 
+   |2.6[b:4]|1.6[b.4]|2.6[3:0]|1.6[3:0]|2.5[7:0]|1.5[7:0]|
+   |                  2.5[b:8]|1.5[b:8]                  |
+   +--------+--------+--------+--------+--------+--------+ 
+
+   +--------+--------+--------+--------+--------+--------+ 
+   |2.8[b:4]|1.8[b:4]|2.8[3:0]|1.8[3.0]|2.7[7:0]|1.7[7:0]|
+   |                 |2.7[b:8||1.7[b:8]|                 |
+   +--------+--------+--------+--------+--------+--------+
+
+-----
+   +--------+--------+--------+--------+--------+--------+
+   |2.2[b:4]|1.2[b.4]|2.2[3:0]|1.2[3:0]|2.1[7:0]|1.1[7:0]|
+   |                 |2.1[b:8]|1.1[b:8]|        |        |
+   +--------+--------+--------+--------+--------+--------+
+
+
+   a10 = 1     a20 = 7   a30 = d
+   a11 = 2     a21 = 8   a31 = e
+   a12 = 3     a22 = 9   a33 = f
+   
+   b10 = 4     b20 = a   b30 = g
+   b11 = 5     b21 = b   b31 = h
+   b12 = 6     b22 = c   b32 = i
+
+   memory order is
+   
+   
+   
+
+     7 6 5 4  3 2 1 0
+   +--------+--------+     
+   |    BBAA|BBAABBAA|     
+   |    2222|21211111|     
+   |    2121|02021010| 
+   +--------+--------+ 
+    hgedcb98 a6735421   -> .cba.987.654.321
+     7 6 5 4  3 2 1 0
+
+                       
+   +--------+--------+                 Destination    Source
+   |BBBBAAAA|BBBBAAAA|                           0         0
+   |22212221|21112111|                           1         2
+   |21022102|02100210|                           2         1
+   +--------+--------+                           3         3
+                                                 4         2
+                                                 5         4
+                                                 6         3
+                                                 7         5
+
+    .cba.987.654.321  want
+
+Remap                                cba69873a6547321
+Duplicate                            cba69873a6547321
+Shift org 16 left by 4               ba6.873.654.321.
+Merge low 32 org, hi from duplicate  cba69873654.321.
+Shift 16 right by 4                  .cba.987.654.321
+This is what we wanted               .cba.987.654.321 
+
+
+   1. ld  s[0] -> ymm0 lo
+   2. ld  s[3] -> ymm0 hi
+   3. remap     ymm0
+   4. duplicate ymm0 -> ymm1
+   5. shift org 16 left ymm0 by 4
+   6. merge ymm0 + ymm1 -> ymm0
+   7. shift 16 right ymm0 by 4
+   8. store b4,A4,B3,A3, B2,A2,B1,A1
+
+*/
+
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -1023,20 +1125,22 @@ static inline uint64_t packA (uint16_t v0,
                               uint16_t v5);
 
 
-static inline uint64_t packB (uint16_t v0, 
-                              uint16_t v1,
-                              uint16_t v2,
-                              uint16_t v3,
-                              uint16_t v4,
-                              uint16_t v5);
+static inline uint64_t packB (uint16_t v4, 
+                              uint16_t v5,
+                              uint16_t v6,
+                              uint16_t v7,
+                              uint16_t v8,
+                              uint16_t v9,
+                              uint16_t vA,
+                              uint16_t vB);
 
 
-static inline uint64_t packC (uint16_t v0, 
-                              uint16_t v1,
-                              uint16_t v2,
-                              uint16_t v3,
-                              uint16_t v4,
-                              uint16_t v5);
+static inline uint64_t packC (uint16_t vA, 
+                              uint16_t vB,
+                              uint16_t vC,
+                              uint16_t vD,
+                              uint16_t vE,
+                              uint16_t vF);
 
 /* ---------------------------------------------------------------------- */
 static void fill (WibFrame *frames, int nframes, uint16_t const *patterns)
@@ -1065,7 +1169,7 @@ static void fill16 (uint64_t *src, uint16_t const *patterns)
    uint64_t       *s = src;
 
    s[0] = packA (p[ 0], p[ 1], p[ 2], p[ 3], p[ 4], p[ 5]);
-   s[1] = packB (p[ 5], p[ 6], p[ 7], p[ 8], p[ 9], p[10]);
+   s[1] = packB (p[ 4], p[ 5], p[ 6], p[ 7], p[ 8], p[ 9], p[10], p[11]);
    s[2] = packC (p[10], p[11], p[12], p[13], p[14], p[15]);
    
 
@@ -1086,7 +1190,7 @@ static void fill64 (uint64_t *src, uint16_t const *patterns)
    for (int idx = 0; idx < 4; idx++)
    {
       s[0] = packA (p[ 0], p[ 1], p[ 2], p[ 3], p[ 4], p[ 5]);
-      s[1] = packB (p[ 5], p[ 6], p[ 7], p[ 8], p[ 9], p[10]);
+      s[1] = packB (p[ 4], p[ 5], p[ 6], p[ 7], p[ 8], p[ 9], p[10], p[11]);
       s[2] = packC (p[10], p[11], p[12], p[13], p[14], p[15]);
 
       p   += 16;
@@ -1106,25 +1210,44 @@ static inline uint64_t packA (uint16_t v0,
                               uint16_t v3,
                               uint16_t v4,
                               uint16_t v5)
+
 {
+/*
+          7        6        5        4        3        2        1        0
+   +--------+--------+--------+--------+--------+--------+--------+--------+
+   |2.3[7:0]|1.3[7:0]|2.2[b:4]|1.2[b.4]|2.2[3:0]|1.2[3:0]|2.1[7:0]|1.1[7:0]|
+   |                                   |2.1[b:8]|1.1[b:8]|        |        |
+   +--------+--------+--------+--------+--------+--------+--------+--------+
+
+   +--------+--------+--------+--------+--------+--------+--------+--------+
+   | v5[7:0]| v4[7:0]| v3[b:4]| v2[b.4]| v3[3:0]| v2[3:0]| v1[7:0]| v0[7:0]|
+   |                                   | v1[b:8]| v0[b:8]|                 |
+   +--------+--------+--------+--------+--------+--------+--------+--------+
+
+*/
    uint64_t s;
 
-   s   = v5;
 
-   s <<= 12;
-   s  |= v4;
+   // ----   Byte 7,6   
+             s   = (v5 & 0xff);  // s5[7:0]
+   s <<= 8;  s  |= (v4 & 0xff);  // s4[7:0]
 
-   s <<= 12;
-   s  |= v3;
+   // ----   Byte 5,4
+   s <<= 8;  s  |= (v3 >>   4);  // s3[b:4]
+   s <<= 8;  s  |= (v2 >>   4);  // s2[b:4]
 
-   s <<= 12;
-   s  |= v2;
+   // ----   Byte 3
+   s <<= 4;  s  |= (v3 &  0xf);  // s3[3:0]
+   s <<= 4;  s  |= (v1 >>   8);  // s1[b:8]
 
-   s <<= 12;
-   s  |= v1;
+   // ----   Byte 2
+   s <<= 4;  s  |= (v2 &  0xf);  // s2[3:0]
+   s <<= 4;  s  |= (v0 >>   8);  // s0[b:8]
 
-   s <<= 12;
-   s  |= v0;
+   // ----   Byte 1,0
+   s <<= 8;  s  |= (v1 & 0xff);  // s1{7:0]
+   s <<= 8;  s  |= (v0 & 0xff);  // s0[7:0]
+
 
    return s;
 }
@@ -1133,31 +1256,54 @@ static inline uint64_t packA (uint16_t v0,
 
 
 /* ---------------------------------------------------------------------- */
-static inline uint64_t packB (uint16_t v0, 
-                              uint16_t v1,
-                              uint16_t v2,
-                              uint16_t v3,
-                              uint16_t v4,
-                              uint16_t v5)
+static inline uint64_t packB (uint16_t v4, 
+                              uint16_t v5,
+                              uint16_t v6,
+                              uint16_t v7,
+                              uint16_t v8,
+                              uint16_t v9,
+                              uint16_t vA,
+                              uint16_t vB)
 {
+/*
+         7        6        5        4        3        2        1        0
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+  |2.6[3:0]|1.6[3:0]|2.5[7:0]|1.5[7:0]|2.4[b:4]|1.4[b:4]|2.4[3:0]|1.4[3:0]|
+  |2.5[b:8]|1.5[b:8]|                 |        |        |2.3[b:8]|1.3[b:8]|
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+  |  B[3:0]|  A[3:0]|  9[7:0]|  8[7:0]|  7[b:4]|  6[b:4]|  7[3:0]|  6[3:0]|
+  |  9[b:8]|  8[b:8]|                 |        |        |  5[b:8]|  4[b:8]|
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+
+*/
    uint64_t s;
 
-   s   = v5;
+   // ----    Byte 7
+              s   = vB &  0xf;  // vB[3:0]
+   s <<= 4;   s  |= v9 >>   8;  // v9[b:8]
 
-   s <<= 12;
-   s  |= v4;
+   // ----    Byte 6
+   s <<= 4;   s  |= vA &  0xf;  // vA[3:0]
+   s <<= 4;   s  |= v8 >>   8;  // v8[b:8]
 
-   s <<= 12;
-   s  |= v3;
+   // ----    Byte 5,4
+   s <<= 8;   s  |= v9 & 0xff;  // v9[7:0]
+   s <<= 8;   s  |= v8 & 0xff;  // v8[7:0]
 
-   s <<= 12;
-   s  |= v2;
+   // ----    Byte 3,2
+   s <<= 8;   s  |= v7 >>   4;  // v7[b:4]
+   s <<= 8;   s  |= v6 >>   4;  // v6[b:4]
 
-   s <<= 12;
-   s  |= v1;
+   // ----    Byte 1
+   s <<= 4;   s  |= v7 &  0xf;  // v7[3:0]
+   s <<= 4;   s  |= v5 >>   8;  // v5[b:8]
 
-   s <<= 8;
-   s  |= (v0 >> 4);
+   // ----    Byte 0
+   s <<= 4;   s  |= v6 &  0xf;  // v6[3:0]
+   s <<= 4;   s  |= v4 >>   8;  // v4[b:8]
+
 
    return s;
 }
@@ -1166,31 +1312,49 @@ static inline uint64_t packB (uint16_t v0,
 
 
 /* ---------------------------------------------------------------------- */
-static inline uint64_t packC (uint16_t v0, 
-                              uint16_t v1,
-                              uint16_t v2,
-                              uint16_t v3,
-                              uint16_t v4,
-                              uint16_t v5)
+static inline uint64_t packC (uint16_t vA, 
+                              uint16_t vB,
+                              uint16_t vC,
+                              uint16_t vD,
+                              uint16_t vE,
+                              uint16_t vF)
 {
+
+/*
+
+         7        6        5        4        3        2        1        0
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+  |2.8[b:4]|1.8[b:4]|2.8[3:0]|1.8[3.0]|2.7[7:0]|1.7[7:0]|2.6[b:4]|1.6[b:4]|
+  |                 |2.7[b:8||1.7[b:8]|                                   |
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+  |  F[b:4]|  E[b:4]|  F[3:0]|  E[3.0]|  D[7:0]|  C[7:0]|  B[b:4]|  A[b:4]|
+  |                 |  D[b:8||  C[b:8]|                                   |
+  +--------+--------+--------+--------+--------+--------+--------+--------+
+
+*/
    uint64_t s;
 
-   s   = v5;
+   // ----    Byte 7,6
+              s   = vF >>   4;  // vF[b:4]
+   s <<= 8;   s  |= vE >>   4;  // vE[b:4]
 
-   s <<= 12;
-   s  |= v4;
+   // ----    Byte 5
+   s <<= 4;   s  |= vF &  0xf;  // vF[3:0]
+   s <<= 4;   s  |= vD >>   8;  // vD[b:8]
 
-   s <<= 12;
-   s  |= v3;
+   // ----    Byte 4
+   s <<= 4;   s  |= vE &  0xf;  // vE[3:0]
+   s <<= 4;   s  |= vC >>   8;  // vC[b:8]
 
-   s <<= 12;
-   s  |= v2;
+   // ----    Byte 3,2
+   s <<= 8;   s  |= vD & 0xff;  // vD[7:0]
+   s <<= 8;   s  |= vC & 0xff;  // vC[7:0]
 
-   s <<= 12;
-   s  |= v1;
-
-   s <<= 4;
-   s  |= (v0 >> 8);
+   // ----    Byte 1,0
+   s <<= 8;   s  |= vB >>   4;  // vB[b:4]
+   s <<= 8;   s  |= vA >>   4;  // vA[b:4]
 
    return s;
 }

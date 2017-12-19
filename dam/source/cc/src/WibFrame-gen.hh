@@ -59,7 +59,142 @@ static inline void expandAdcs16_init_kernel ()
 /* ---------------------------------------------------------------------- */
 
 
+/*
+    65 54 44 33 22 21 1
+    06 28 40 62 84 06 28 40
+   +--+--+--+--+--+--+--+--+
+   |55 44 33 22 31 20 11 00|
+   |10 10 21 21 02 02 10 10|
+   +--+--+--+--+--+--+--+--+
+*/
 
+#define D0_10(_w0) (((_w0 >>  0) & 0xff) << 0)
+#define D1_10(_w0) (((_w0 >>  8) & 0xff) << 0)
+#define D0_2(_w0)  (((_w0 >> 16) & 0x0f) << 8)
+#define D2_0(_w0)  (((_w0 >> 20) & 0x0f) << 0)
+#define D1_2(_w0)  (((_w0 >> 24) & 0x0f) << 8)
+#define D3_0(_w0)  (((_w0 >> 28) & 0x0f) << 0)
+#define D2_21(_w0) (((_w0 >> 32) & 0xff) << 4)
+#define D3_21(_w0) (((_w0 >> 40) & 0xff) << 4)
+#define D4_10(_w0) (((_w0 >> 48) & 0xff) << 0)
+#define D5_10(_w0) (((_w0 >> 56) & 0xff) << 0)
+
+/*
+    65 54 44 33 22 21 1
+    06 28 40 62 84 06 28 40
+   +--+--+--+--+--+--+--+--+
+   |B9 A8 99 88 77 66 75 64|
+   |02 02 10 10 21 21 02 02|
+   +--+--+--+--+--+--+--+--+
+
+*/
+#define D4_2(_w1)  (((_w1 >>  0) & 0x0f) << 8)
+#define D6_0(_w1)  (((_w1 >>  4) & 0x0f) << 0)
+#define D5_2(_w1)  (((_w1 >>  8) & 0x0f) << 8)
+#define D7_0(_w1)  (((_w1 >> 12) & 0x0f) << 0)
+#define D6_21(_w1) (((_w1 >> 16) & 0xff) << 4)
+#define D7_21(_w1) (((_w1 >> 24) & 0xff) << 4)
+#define D8_10(_w1) (((_w1 >> 32) & 0xff) << 0)
+#define D9_10(_w1) (((_w1 >> 40) & 0xff) << 0)
+#define D8_2(_w1)  (((_w1 >> 48) & 0x0f) << 8)
+#define DA_0(_w1)  (((_w1 >> 52) & 0x0f) << 0)
+#define D9_2(_w1)  (((_w1 >> 56) & 0x0f) << 8)
+#define DB_0(_w1)  (((_w1 >> 60) & 0x0f) << 0)
+
+/*
+    65 54 44 33 22 21 1
+    06 28 40 62 84 06 28 40
+   +--+--+--+--+--+--+--+--+
+   |FF EE FD EC DD CC BB AA|
+   |21 21 02 02 10 10 21 21|
+   +--+--+--+--+--+--+--+--+
+*/
+
+#define DA_21(_w2)  (((_w2 >>  0) & 0xff) << 4)
+#define DB_21(_w2)  (((_w2 >>  8) & 0xff) << 4)
+#define DC_10(_w2)  (((_w2 >> 16) & 0xff) << 0)
+#define DD_10(_w2)  (((_w2 >> 24) & 0xff) << 0)
+#define DC_2(_w2)   (((_w2 >> 32) & 0x0f) << 8)
+#define DE_0(_w2)   (((_w2 >> 36) & 0x0f) << 0)
+#define DD_2(_w2)   (((_w2 >> 40) & 0x0f) << 8)
+#define DF_0(_w2)   (((_w2 >> 44) & 0x0f) << 0)
+#define DE_21(_w2)  (((_w2 >> 48) & 0xff) << 4)
+#define DF_21(_w2)  (((_w2 >> 56) & 0xff) << 4)
+
+#define D0(_w0)     (D0_2  (_w0) | D0_10 (_w0))
+#define D1(_w0)     (D1_2  (_w0) | D1_10 (_w0))
+#define D2(_w0)     (D2_21 (_w0) | D2_0  (_w0))
+#define D3(_w0)     (D3_21 (_w0) | D3_0  (_w0))
+
+#define D4(_w1,_w0) (D4_2  (_w1) | D4_10 (_w0))
+#define D5(_w1,_w0) (D5_2  (_w1) | D5_10 (_w0))
+#define D6(_w1)     (D6_21 (_w1) | D6_0  (_w1))
+#define D7(_w1)     (D7_21 (_w1) | D7_0  (_w1))
+#define D8(_w1)     (D8_2  (_w1) | D8_10 (_w1))
+#define D9(_w1)     (D9_2  (_w1) | D9_10 (_w1))
+
+#define DA(_w2,_w1) (DA_21 (_w2) | DA_0  (_w1))
+#define DB(_w2,_w1) (DB_21 (_w2) | DB_0  (_w1))
+#define DC(_w2)     (DC_2  (_w2) | DC_10 (_w2))
+#define DD(_w2)     (DD_2  (_w2) | DD_10 (_w2))
+#define DE(_w2)     (DE_21 (_w2) | DE_0  (_w2))
+#define DF(_w2)     (DF_21 (_w2) | DF_0  (_w2))
+
+
+static inline uint64_t expand0_3 (uint64_t w0)
+               __attribute__ ((always_inline));
+
+static inline uint64_t expand0_3 (uint64_t w0)
+{
+   uint64_t dst = (D0 (w0)     << 0 * 16)
+                | (D1 (w0)     << 1 * 16)
+                | (D2 (w0)     << 2 * 16)
+                | (D3 (w0)     << 3 * 16);
+
+   return dst;
+}
+
+
+static inline uint64_t expand4_7 (uint64_t w1, uint64_t w0)
+                            __attribute__ ((always_inline));
+
+static inline uint64_t expand4_7 (uint64_t w1, uint64_t w0)
+{
+   uint64_t dst = (D4 (w1, w0) << 0 * 16)
+                | (D5 (w1, w0) << 1 * 16)
+                | (D6 (w1)     << 2 * 16) 
+                | (D7 (w1)     << 3 * 16);
+
+   return dst;
+}
+
+static inline uint64_t expand8_B (uint64_t w2, uint64_t w1) 
+                            __attribute__ ((always_inline));
+
+static inline uint64_t expand8_B (uint64_t w2, uint64_t w1)
+{
+   uint64_t dst = (D8 (w1)     << 0 * 16)
+                | (D9 (w1)     << 1 * 16)
+                | (DA (w2, w1) << 2 * 16)
+                | (DB (w2, w1) << 3 * 16);
+
+   return dst;
+}
+
+
+static inline uint64_t expandC_F (uint64_t w2) 
+               __attribute__ ((always_inline));
+
+static inline uint64_t expandC_F (uint64_t w2)
+{
+   uint64_t dst = (DC (w2)     << 0 * 16)
+                | (DD (w2)     << 1 * 16)
+                | (DE (w2)     << 2 * 16)
+                | (DF (w2)     << 3 * 16);
+
+   return dst;
+}
+ 
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -73,32 +208,26 @@ static inline void expandAdcs16_init_kernel ()
 /* ---------------------------------------------------------------------- */
 static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
 {
-   uint64_t w0;
-   uint64_t w1;
-   uint64_t w2;
+   uint64_t *dst64 = reinterpret_cast<uint64_t *>(dst);
 
-   w0 = *src++;  
-   dst[0] = (w0 >>  0) & 0xfff;     
-   dst[1] = (w0 >> 12) & 0xfff;
-   dst[2] = (w0 >> 24) & 0xfff;
-   dst[3] = (w0 >> 36) & 0xfff;
-   dst[4] = (w0 >> 48) & 0xfff;
+   uint64_t w0 = *src++;  
+   dst64[0]    = expand0_3 (w0);
 
+   uint64_t w1 = *src++; 
+   dst64[1]    = expand4_7 (w1, w0);
 
-   w1 = *src++; 
-   dst[5] = ((w1 & 0xff) << 4) | (w0 >> 60);
-   dst[6] = (w1 >>  8) & 0xfff;
-   dst[7] = (w1 >> 20) & 0xfff;
-   dst[8] = (w1 >> 32) & 0xfff;
-   dst[9] = (w1 >> 44) & 0xfff;
+   uint64_t w2 = *src++; 
+   dst64[2]    = expand8_B (w2, w1);
+   dst64[3]    = expandC_F (w2);
 
-   w2 = *src++; 
-   dst[10] = ((w2 & 0xf) << 8) | (w1 >> 56);
-   dst[11] = (w2 >>  4) & 0xfff;
-   dst[12] = (w2 >> 16) & 0xfff;
-   dst[13] = (w2 >> 28) & 0xfff;
-   dst[14] = (w2 >> 40) & 0xfff;
-   dst[15] = (w2 >> 52) & 0xfff;
+/*
+   for (int idx = 0; idx < 16; idx++)
+   {
+      printf (" %4.4" PRIx16 "", dst[idx]);
+   }
+
+   putchar ('\n');
+*/
 
    return;
 }
@@ -178,6 +307,308 @@ inline void expandAdcs16x4_kernel (uint16_t       *dst,
 /* ---------------------------------------------------------------------- */
 
 
+static inline uint64_t transpose0 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0) __attribute ((always_inline));
+
+static inline uint64_t transpose0 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0)
+{
+   uint64_t dst = (D0 (w0_0) << 0 * 16)
+                | (D0 (w1_0) << 1 * 16)
+                | (D0 (w2_0) << 2 * 16)
+                | (D0 (w3_0) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transpose1 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0) __attribute ((always_inline));
+
+static inline uint64_t transpose1 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0)
+{
+   uint64_t dst = (D1 (w0_0) << 0 * 16)
+                | (D1 (w1_0) << 1 * 16)
+                | (D1 (w2_0) << 2 * 16)
+                | (D1 (w3_0) << 3 * 16);
+   return dst;
+}
+
+
+
+static inline uint64_t transpose2 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0) __attribute ((always_inline));
+
+static inline uint64_t transpose2 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0)
+{
+   uint64_t dst = (D2 (w0_0) << 0 * 16)
+                | (D2 (w1_0) << 1 * 16)
+                | (D2 (w2_0) << 2 * 16)
+                | (D2 (w3_0) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transpose3 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0) __attribute ((always_inline));
+
+static inline uint64_t transpose3 (uint64_t w0_0,
+                                   uint64_t w1_0,
+                                   uint64_t w2_0,
+                                   uint64_t w3_0)
+{
+   uint64_t dst = (D3 (w0_0) << 0 * 16)
+                | (D3 (w1_0) << 1 * 16)
+                | (D3 (w2_0) << 2 * 16)
+                | (D3 (w3_0) << 3 * 16);
+   return dst;
+}
+
+
+
+static inline uint64_t transpose4 (uint64_t w0_0, uint64_t w0_1,
+                                   uint64_t w1_0, uint64_t w1_1,
+                                   uint64_t w2_0, uint64_t w2_1,
+                                   uint64_t w3_0, uint64_t w3_1) 
+                                   __attribute ((always_inline));
+
+static inline uint64_t transpose4 (uint64_t w0_0, uint64_t w0_1,
+                                   uint64_t w1_0, uint64_t w1_1,
+                                   uint64_t w2_0, uint64_t w2_1,
+                                   uint64_t w3_0, uint64_t w3_1) 
+{
+   uint64_t dst = (D4 (w0_1, w0_0) << 0 * 16)
+                | (D4 (w1_1, w1_0) << 1 * 16)
+                | (D4 (w2_1, w2_0) << 2 * 16)
+                | (D4 (w3_1, w3_0) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transpose5 (uint64_t w0_0, uint64_t w0_1,
+                                   uint64_t w1_0, uint64_t w1_1,
+                                   uint64_t w2_0, uint64_t w2_1,
+                                   uint64_t w3_0, uint64_t w3_1) 
+                                   __attribute ((always_inline));
+
+static inline uint64_t transpose5 (uint64_t w0_0, uint64_t w0_1,
+                                   uint64_t w1_0, uint64_t w1_1,
+                                   uint64_t w2_0, uint64_t w2_1,
+                                   uint64_t w3_0, uint64_t w3_1) 
+{
+   uint64_t dst = (D5 (w0_1, w0_0) << 0 * 16)
+                | (D5 (w1_1, w1_0) << 1 * 16)
+                | (D5 (w2_1, w2_0) << 2 * 16)
+                | (D5 (w3_1, w3_0) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transpose6 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+                    __attribute ((always_inline));
+
+static inline uint64_t transpose6 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+{
+   uint64_t dst = (D6 (w0_1) << 0 * 16)
+                | (D6 (w1_1) << 1 * 16)
+                | (D6 (w2_1) << 2 * 16)
+                | (D6 (w3_1) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transpose7 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+                    __attribute ((always_inline));
+
+static inline uint64_t transpose7 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+{
+   uint64_t dst = (D7 (w0_1) << 0 * 16)
+                | (D7 (w1_1) << 1 * 16)
+                | (D7 (w2_1) << 2 * 16)
+                | (D7 (w3_1) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transpose8 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+                    __attribute ((always_inline));
+
+static inline uint64_t transpose8 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+{
+   uint64_t dst = (D8 (w0_1) << 0 * 16)
+                | (D8 (w1_1) << 1 * 16)
+                | (D8 (w2_1) << 2 * 16)
+                | (D8 (w3_1) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transpose9 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+                    __attribute ((always_inline));
+
+static inline uint64_t transpose9 (uint64_t w0_1,
+                                   uint64_t w1_1,
+                                   uint64_t w2_1,
+                                   uint64_t w3_1)
+{
+   uint64_t dst = (D9 (w0_1) << 0 * 16)
+                | (D9 (w1_1) << 1 * 16)
+                | (D9 (w2_1) << 2 * 16)
+                | (D9 (w3_1) << 3 * 16);
+   return dst;
+}
+
+
+
+static inline uint64_t transposeA (uint64_t w0_1, uint64_t w0_2,
+                                   uint64_t w1_1, uint64_t w1_2,
+                                   uint64_t w2_1, uint64_t w2_2,
+                                   uint64_t w3_1, uint64_t w3_2) 
+                                   __attribute ((always_inline));
+
+static inline uint64_t transposeA (uint64_t w0_1, uint64_t w0_2,
+                                   uint64_t w1_1, uint64_t w1_2,
+                                   uint64_t w2_1, uint64_t w2_2,
+                                   uint64_t w3_1, uint64_t w3_2) 
+{
+   uint64_t dst = (DA (w0_2, w0_1) << 0 * 16)
+                | (DA (w1_2, w1_1) << 1 * 16)
+                | (DA (w2_2, w2_1) << 2 * 16)
+                | (DA (w3_2, w3_1) << 3 * 16);
+   return dst;
+}
+
+
+
+static inline uint64_t transposeB (uint64_t w0_1, uint64_t w0_2,
+                                   uint64_t w1_1, uint64_t w1_2,
+                                   uint64_t w2_1, uint64_t w2_2,
+                                   uint64_t w3_1, uint64_t w3_2) 
+                                   __attribute ((always_inline));
+
+static inline uint64_t transposeB (uint64_t w0_1, uint64_t w0_2,
+                                   uint64_t w1_1, uint64_t w1_2,
+                                   uint64_t w2_1, uint64_t w2_2,
+                                   uint64_t w3_1, uint64_t w3_2) 
+{
+   uint64_t dst = (DB (w0_2, w0_1) << 0 * 16)
+                | (DB (w1_2, w1_1) << 1 * 16)
+                | (DB (w2_2, w2_1) << 2 * 16)
+                | (DB (w3_2, w3_1) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transposeC (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+                    __attribute ((always_inline));
+
+static inline uint64_t transposeC (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+{
+   uint64_t dst = (DC (w0_2) << 0 * 16)
+                | (DC (w1_2) << 1 * 16)
+                | (DC (w2_2) << 2 * 16)
+                | (DC (w3_2) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transposeD (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+                    __attribute ((always_inline));
+
+static inline uint64_t transposeD (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+{
+   uint64_t dst = (DD (w0_2) << 0 * 16)
+                | (DD (w1_2) << 1 * 16)
+                | (DD (w2_2) << 2 * 16)
+                | (DD (w3_2) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transposeE (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+                    __attribute ((always_inline));
+
+static inline uint64_t transposeE (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+{
+   uint64_t dst = (DE (w0_2) << 0 * 16)
+                | (DE (w1_2) << 1 * 16)
+                | (DE (w2_2) << 2 * 16)
+                | (DE (w3_2) << 3 * 16);
+   return dst;
+}
+
+
+static inline uint64_t transposeF (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+                    __attribute ((always_inline));
+
+static inline uint64_t transposeF (uint64_t w0_2,
+                                   uint64_t w1_2,
+                                   uint64_t w2_2,
+                                   uint64_t w3_2)
+{
+   uint64_t dst = (DF (w0_2) << 0 * 16)
+                | (DF (w1_2) << 1 * 16)
+                | (DF (w2_2) << 2 * 16)
+                | (DF (w3_2) << 3 * 16);
+   return dst;
+}
 
 
 /* ---------------------------------------------------------------------- *//*!
@@ -206,101 +637,65 @@ static void transposeAdcs16x4_kernel (uint64_t      *dst64,
    uint64_t w2_0 = *src2++;
    uint64_t w3_0 = *src3++;
 
-   // Channel = 0
-   dst    = ((w0_0 >> 0 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 0 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 0 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 0 * 12) & 0xfff) << 3 * 16;
-  *dst64  = dst;
+
+   // Channel = 0x0
+  *dst64  = transpose0 (w0_0, w1_0, w2_0, w3_0);
    dst64 += ndstStride;
    //printf ("t16x4[0] = %16.16" PRIx64 "\n", dst);
    
-   // Channel  1
-   dst    = ((w0_0 >> 1 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 1 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 1 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 1 * 12) & 0xfff) << 3 * 16;
+   // Channel  0x1
+   dst    = transpose1 (w0_0, w1_0, w2_0, w3_0);
   *dst64  = dst;
    dst64 += ndstStride;
    //printf ("t16x4[1] = %16.16" PRIx64 "\n", dst);
 
    
-   // Channel  2
-   dst    = ((w0_0 >> 2 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 2 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 2 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 2 * 12) & 0xfff) << 3 * 16;
+   // Channel  0x2
+   dst    = transpose2 (w0_0, w1_0, w2_0, w3_0);
   *dst64  = dst;
    dst64 += ndstStride;
 
    
-   // Channel  3
-   dst    = ((w0_0 >> 3 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 3 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 3 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 3 * 12) & 0xfff) << 3 * 16;
+   // Channel  0x3
+   dst    = transpose3 (w0_0, w1_0, w2_0, w3_0);
   *dst64  = dst;
    dst64 += ndstStride;
 
 
-   // Channel 4
-   dst    = ((w0_0 >> 4 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 4 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 4 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 4 * 12) & 0xfff) << 3 * 16;
-  *dst64  = dst;
-   dst64 += ndstStride;
-   //printf ("Channel 4 = %16.16" PRIx64 "\n", dst);
-   
    uint64_t w0_1 = *src0++;  
    uint64_t w1_1 = *src1++;  
    uint64_t w2_1 = *src2++;  
    uint64_t w3_1 = *src3++;  
 
 
+   // Channel 0x4
+  *dst64  = transpose4 (w0_0,w0_1,  w1_0,w1_1,  w2_0,w2_1,  w3_0,w3_1);
+   dst64 += ndstStride;
+   //printf ("Channel 4 = %16.16" PRIx64 "\n", dst);
 
-   // Channel 5
-   dst    = (((w0_1 & 0xff) << 4) | (w0_0 >> 5*12)) << 0 * 16;
-   dst   |= (((w1_1 & 0xff) << 4) | (w1_0 >> 5*12)) << 1 * 16;
-   dst   |= (((w2_1 & 0xff) << 4) | (w2_0 >> 5*12)) << 2 * 16;
-   dst   |= (((w3_1 & 0xff) << 4) | (w3_0 >> 5*12)) << 3 * 16;
-  *dst64  = dst;
+
+   // Channel 0x5
+  *dst64  = transpose5 (w0_0,w0_1,  w1_0,w1_1,  w2_0,w2_1,  w3_0,w3_1);
    dst64 += ndstStride;
 
 
-   // Channel 6
-   dst    = ((w0_1 >> (0*12 + 8)) & 0xfff)        << 0 * 16;
-   dst   |= ((w1_1 >> (0*12 + 8)) & 0xfff)        << 1 * 16;
-   dst   |= ((w2_1 >> (0*12 + 8)) & 0xfff)        << 2 * 16;
-   dst   |= ((w3_1 >> (0*12 + 8)) & 0xfff)        << 3 * 16;
-  *dst64  = dst;
+   // Channel 0x6
+  *dst64  = transpose6 (w0_1, w1_1, w2_1, w3_1);
    dst64 += ndstStride;
 
 
-   // Channel 7
-   dst    = ((w0_1 >> (1*12 + 8)) & 0xfff)        << 0 * 16;
-   dst   |= ((w1_1 >> (1*12 + 8)) & 0xfff)        << 1 * 16;
-   dst   |= ((w2_1 >> (1*12 + 8)) & 0xfff)        << 2 * 16;
-   dst   |= ((w3_1 >> (1*12 + 8)) & 0xfff)        << 3 * 16;
-  *dst64  = dst;
+   // Channel 0x7
+  *dst64  = transpose7 (w0_1, w1_1, w2_1, w3_1);
    dst64 += ndstStride;
 
    
-   // Channel 8
-   dst    = ((w0_1 >> (2*12 + 8)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_1 >> (2*12 + 8)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_1 >> (2*12 + 8)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_1 >> (2*12 + 8)) & 0xfff) << 3 * 16;
-  *dst64  = dst;
+   // Channel 0x8
+  *dst64  = transpose8 (w0_1, w1_1, w2_1, w3_1);
    dst64 += ndstStride;
 
    
-   // Channel 9
-   dst    = ((w0_1 >> (3*12 + 8)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_1 >> (3*12 + 8)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_1 >> (3*12 + 8)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_1 >> (3*12 + 8)) & 0xfff) << 3 * 16;
-  *dst64  = dst;
+   // Channel 0x9
+  *dst64  = transpose9 (w0_1, w1_1, w2_1, w3_1);
    dst64 += ndstStride;
    //printf ("t16x4[9] = %16.16" PRIx64 "\n", dst);
    
@@ -310,57 +705,33 @@ static void transposeAdcs16x4_kernel (uint64_t      *dst64,
    uint64_t w3_2 = *src3++;  
       
 
-   // Chanel 10
-   dst    = (((w0_1 >> (4*12 + 8)) & 0xff)  | (w0_2 & 0xf) << 8) << 0 * 16;
-   dst   |= (((w1_1 >> (4*12 + 8)) & 0xff)  | (w1_2 & 0xf) << 8) << 1 * 16;
-   dst   |= (((w2_1 >> (4*12 + 8)) & 0xff)  | (w2_2 & 0xf) << 8) << 2 * 16;
-   dst   |= (((w3_1 >> (4*12 + 8)) & 0xff)  | (w3_2 & 0xf) << 8) << 3 * 16;
-  *dst64  = dst;
+   // Chanel 0xA
+  *dst64  = transposeA (w0_1,w0_2,  w1_1,w1_2,  w2_1,w2_2,  w3_1,w3_2);
    dst64 += ndstStride;
    
 
-   // Channel 11
-   dst    = ((w0_2 >> (0*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (0*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (0*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (0*12 + 4)) & 0xfff) << 3 * 16;
-  *dst64  = dst;
+   // Channel 0xB
+  *dst64  = transposeB (w0_1,w0_2,  w1_1,w1_2,  w2_1,w2_2,  w3_1,w3_2);
    dst64 += ndstStride;
       
 
-   // Channel 12
-   dst    = ((w0_2 >> (1*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (1*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (1*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (1*12 + 4)) & 0xfff) << 3 * 16;
-  *dst64  = dst;
+   // Channel 0xC
+  *dst64  = transposeC (w0_2, w1_2, w2_2, w3_2);
    dst64 += ndstStride;
 
 
-   // Channel 13   
-   dst    = ((w0_2 >> (2*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (2*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (2*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (2*12 + 4)) & 0xfff) << 3 * 16;
-  *dst64  = dst;
+   // Channel 0xD  
+  *dst64  = transposeD (w0_2, w1_2, w2_2, w3_2);
    dst64 += ndstStride;
 
    
-   // Channel 14
-   dst    = ((w0_2 >> (3*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (3*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (3*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (3*12 + 4)) & 0xfff) << 3 * 16;
-  *dst64  = dst;
+   // Channel 0xE
+  *dst64  = transposeE (w0_2, w1_2, w2_2, w3_2);
    dst64 += ndstStride;
 
 
-   // Channel 15
-   dst    = ((w0_2 >> (4*12 + 4))        ) << 0 * 16;
-   dst   |= ((w1_2 >> (4*12 + 4))        ) << 1 * 16;
-   dst   |= ((w2_2 >> (4*12 + 4))        ) << 2 * 16;
-   dst   |= ((w3_2 >> (4*12 + 4))        ) << 3 * 16;
-  *dst64  = dst;
+   // Channel 0xF
+  *dst64  = transposeF (w0_2, w1_2, w2_2, w3_2);
    dst64 += ndstStride;
 
    return;
@@ -438,150 +809,102 @@ static void transposeAdcs16x4_kernel (uint64_t *const *dst64,
 
 
    // Channel = 0
-   dst    = ((w0_0 >> 0 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 0 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 0 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 0 * 12) & 0xfff) << 3 * 16;
-   dst64[0][offset] = dst;
+   dst64[0][offset] = transpose0 (w0_0, w1_0, w2_0, w3_0);
    print (dst64, 0, offset);
-
 
    
    // Channel  1
-   dst    = ((w0_0 >> 1 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 1 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 1 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 1 * 12) & 0xfff) << 3 * 16;
-   dst64[1][offset] = dst;
+   dst64[1][offset] = transpose1 (w0_0, w1_0, w2_0, w3_0);
    print (dst64, 1, offset);
 
    
    // Channel  2
-   dst    = ((w0_0 >> 2 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 2 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 2 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 2 * 12) & 0xfff) << 3 * 16;
-   dst64[2][offset] = dst;
+   dst64[2][offset] = transpose2 (w0_0, w1_0, w2_0, w3_0);
    print (dst64, 2, offset);
 
    
    // Channel  3
-   dst    = ((w0_0 >> 3 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 3 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 3 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 3 * 12) & 0xfff) << 3 * 16;
-   dst64[3][offset] = dst;
+   dst64[3][offset] = transpose3 (w0_0, w1_0, w2_0, w3_0);
    print (dst64, 3, offset);
 
-   // Channel 4
-   dst    = ((w0_0 >> 4 * 12) & 0xfff) << 0 * 16;
-   dst   |= ((w1_0 >> 4 * 12) & 0xfff) << 1 * 16;
-   dst   |= ((w2_0 >> 4 * 12) & 0xfff) << 2 * 16;
-   dst   |= ((w3_0 >> 4 * 12) & 0xfff) << 3 * 16;
-   dst64[4][offset] = dst;
-   print (dst64, 4, offset);
-   
 
    uint64_t w0_1 = *src0++;  
    uint64_t w1_1 = *src1++;  
    uint64_t w2_1 = *src2++;  
    uint64_t w3_1 = *src3++;  
 
+
+   // Channel 4
+   dst64[4][offset] = transpose4 (w0_0,w0_1,  w1_0,w1_1,  w2_0,w2_1,  w3_0,w3_1);
+   print (dst64, 4, offset);
+   
+
    // Channel 5
-   dst    = (((w0_1 & 0xff) << 4) | (w0_0 >> 5*12)) << 0 * 16;
-   dst   |= (((w1_1 & 0xff) << 4) | (w1_0 >> 5*12)) << 1 * 16;
-   dst   |= (((w2_1 & 0xff) << 4) | (w2_0 >> 5*12)) << 2 * 16;
-   dst   |= (((w3_1 & 0xff) << 4) | (w3_0 >> 5*12)) << 3 * 16;
-   dst64[5][offset] = dst;
+   dst64[5][offset] = transpose5 (w0_0,w0_1,  w1_0,w1_1,  w2_0,w2_1,  w3_0,w3_1);
    print (dst64, 5, offset);
 
+
    // Channel 6
-   dst    = ((w0_1 >> (0*12 + 8)) & 0xfff)        << 0 * 16;
-   dst   |= ((w1_1 >> (0*12 + 8)) & 0xfff)        << 1 * 16;
-   dst   |= ((w2_1 >> (0*12 + 8)) & 0xfff)        << 2 * 16;
-   dst   |= ((w3_1 >> (0*12 + 8)) & 0xfff)        << 3 * 16;
-   dst64[6][offset] = dst;
+   dst64[6][offset] = transpose6 (w0_1, w1_1, w2_1, w3_1);
    print (dst64, 6, offset);
 
+
    // Channel 7
-   dst    = ((w0_1 >> (1*12 + 8)) & 0xfff)        << 0 * 16;
-   dst   |= ((w1_1 >> (1*12 + 8)) & 0xfff)        << 1 * 16;
-   dst   |= ((w2_1 >> (1*12 + 8)) & 0xfff)        << 2 * 16;
-   dst   |= ((w3_1 >> (1*12 + 8)) & 0xfff)        << 3 * 16;
-   dst64[7][offset] = dst;
+   dst64[7][offset] = transpose7 (w0_1, w1_1, w2_1, w3_1);
    print (dst64, 7, offset);
    
+
    // Channel 8
-   dst    = ((w0_1 >> (2*12 + 8)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_1 >> (2*12 + 8)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_1 >> (2*12 + 8)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_1 >> (2*12 + 8)) & 0xfff) << 3 * 16;
-   dst64[8][offset] = dst;
+   dst    = D8 (w0_1)       << 0 * 16;
+   dst   |= D8 (w1_1)       << 1 * 16;
+   dst   |= D8 (w2_1)       << 2 * 16;
+   dst   |= D8 (w3_1)       << 3 * 16;
+   dst64[8][offset] = transpose8 (w0_1, w1_1, w2_1, w3_1);
    print (dst64, 8, offset);
 
    
    // Channel 9
-   dst    = ((w0_1 >> (3*12 + 8)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_1 >> (3*12 + 8)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_1 >> (3*12 + 8)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_1 >> (3*12 + 8)) & 0xfff) << 3 * 16;
-   dst64[9][offset] = dst;
+   dst    = D9 (w0_1)       << 0 * 16;
+   dst   |= D9 (w1_1)       << 1 * 16;
+   dst   |= D9 (w2_1)       << 2 * 16;
+   dst   |= D9 (w3_1)       << 3 * 16;
+   dst64[9][offset] = transpose9 (w0_1, w1_1, w2_1, w3_1);
    print (dst64, 9, offset);
-   
+
+
    uint64_t w0_2 = *src0++;  
    uint64_t w1_2 = *src1++;  
    uint64_t w2_2 = *src2++;  
    uint64_t w3_2 = *src3++;  
       
 
-   // Chanel 10
-   dst    = (((w0_1 >> (4*12 + 8)) & 0xff)  | (w0_2 & 0xf) << 8) << 0 * 16;
-   dst   |= (((w1_1 >> (4*12 + 8)) & 0xff)  | (w1_2 & 0xf) << 8) << 1 * 16;
-   dst   |= (((w2_1 >> (4*12 + 8)) & 0xff)  | (w2_2 & 0xf) << 8) << 2 * 16;
-   dst   |= (((w3_1 >> (4*12 + 8)) & 0xff)  | (w3_2 & 0xf) << 8) << 3 * 16;
-   dst64[10][offset] = dst;
+   // Chanel A
+   dst64[10][offset] = transposeA (w0_1,w0_2,  w1_1,w1_2,  w2_1,w2_2,  w3_1,w3_2);
    print (dst64, 10, offset);   
 
-   // Channel 11
-   dst    = ((w0_2 >> (0*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (0*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (0*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (0*12 + 4)) & 0xfff) << 3 * 16;
-   dst64[11][offset] = dst;
+
+   // Channel B
+   dst64[11][offset] = transposeB (w0_1,w0_2,  w1_1,w1_2,  w2_1,w2_2,  w3_1,w3_2);
    print (dst64, 11, offset);
       
 
-   // Channel 12
-   dst    = ((w0_2 >> (1*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (1*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (1*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (1*12 + 4)) & 0xfff) << 3 * 16;
-   dst64[12][offset] = dst;
+   // Channel C
+   dst64[12][offset] = transposeC (w0_2, w1_2, w2_2, w3_2);
    print (dst64, 12, offset);
 
-   // Channel 13   
-   dst    = ((w0_2 >> (2*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (2*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (2*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (2*12 + 4)) & 0xfff) << 3 * 16;
-   dst64[13][offset] = dst;
+
+   // Channel D
+   dst64[13][offset] = transposeD (w0_2, w1_2, w2_2, w3_2);
    print (dst64, 13, offset);
 
-   // Channel 14
-   dst    = ((w0_2 >> (3*12 + 4)) & 0xfff) << 0 * 16;
-   dst   |= ((w1_2 >> (3*12 + 4)) & 0xfff) << 1 * 16;
-   dst   |= ((w2_2 >> (3*12 + 4)) & 0xfff) << 2 * 16;
-   dst   |= ((w3_2 >> (3*12 + 4)) & 0xfff) << 3 * 16;
-   dst64[14][offset] = dst;
+
+   // Channel 1E
+   dst64[14][offset] = transposeE (w0_2, w1_2, w2_2, w3_2);
    print (dst64, 14, offset);
 
 
-   // Channel 15
-   dst    = ((w0_2 >> (4*12 + 4))        ) << 0 * 16;
-   dst   |= ((w1_2 >> (4*12 + 4))        ) << 1 * 16;
-   dst   |= ((w2_2 >> (4*12 + 4))        ) << 2 * 16;
-   dst   |= ((w3_2 >> (4*12 + 4))        ) << 3 * 16;
-   dst64[15][offset] = dst;
+   // Channel F
+   dst64[15][offset] = transposeF (w0_2, w1_2, w2_2, w3_2);
    print (dst64, 15, offset);
 
    return;
