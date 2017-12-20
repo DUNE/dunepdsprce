@@ -3,6 +3,37 @@
 # RELEASED: 2017.12.19
 # ----------------------------------------------------------------------
 
+WIB Frame with interleaved ADC bytes
+------------------------------------
+The original definition of the WIB frame was tightly packed 12-bit ADCs.
+This definition was changed in Sep, but knowledge of this did not reach
+me till Dec. There was many machinations about the WIB data not being
+correctly transported, but this was all due to this change of format. 
+The WIB test pattern (a constant 0xFEx, where X = Wib fiber number) was
+not rich enough to see discern the pattern.  With this pattern, the
+simplist explanation was the bytes where being duplicated.  
+
+This was finally sorted out, but meant the RCE chain of firmware/software
+had to be modified to be correctly interpretted. The best path forward was
+decided to be
+   1) Have Larry modify the WIB emulation in the RCE to match this new
+      format.  
+   2) Leave the HLS firmware as is, since at this point only raw WIB frames
+      are being transported. All that matters is the same amount of data
+      appears.  The RCE, for the most part does not care about the ADC 
+      values.
+   3) Modified proto-dune-dam-lib to read this new data.
+
+This strategy needs only immediate modification to proto-dune-dam-lib. The
+rest can wait until the RCE needs to understand how to correctly assess the
+ADCs.  Until then, the cold data stream in the WIB frame are just a
+bag-of-bits. 
+
+Modified files
+   1) dam/source/cc/src/WibFrame-avx2.hh
+   2) dam/source/cc/src/WibFrame-gen.hh
+
+
 Eliminate use of CLASS_UNUSED_MEMBER
 ------------------------------------
 Modified so that the #define CLASS_UNUSED_MEMBER is no longer required.

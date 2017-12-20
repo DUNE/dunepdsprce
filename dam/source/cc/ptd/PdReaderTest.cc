@@ -403,7 +403,7 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
          printf ("Have Wib frames\n");
       }
 
-      unsigned¯ nWibFrames = pktDsc.getNWibFrames ();
+      unsigned nWibFrames = pktDsc.getNWibFrames ();
 
       uint64_t const *ptr = pkts + o64;
       printf ("Packet[%2u:%1u.%4d] = "

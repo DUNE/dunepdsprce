@@ -18,6 +18,8 @@
 #
 #     DATE   WHO WHAT
 # ---------- --- ----------------------------------------------------------- 
+# 2017.12.19 jjr Bump version of libprotodune-dam to 0.0.4. This version 
+#                accepts the interleaved ADC byte streams.
 # 2017.11.30 jjr Bump version.  The code did not change, but there was a
 #                correction to the makeutil/define_tool.mk to correctly
 #                handle an empty string (which was only on Mac builds).
@@ -86,6 +88,7 @@ ifeq ($(optflags),)
       endif
 
 endif
+
 
 CXXFLAGS += $(optflags)
 CFLAGS   += $(optflags)
@@ -166,7 +169,7 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
 libprotodune-dam__CCFLAGS   := -g
 libprotodune-dam__CXXFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
-libprotodune-dam_VERSION    := 0.0.3
+libprotodune-dam_VERSION    := 0.0.4
 SHAREABLES                  += libprotodune-dam
 
 # ----------------------------------------------------------
