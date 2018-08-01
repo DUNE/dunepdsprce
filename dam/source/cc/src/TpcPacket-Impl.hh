@@ -271,6 +271,7 @@ TpcPacket::getRecordFormat (pdd::record::TpcPacket const *packet)
 /* ---------------------------------------------------------------------- */
 
 
+
 /* ---------------------------------------------------------------------- *//*!
 
   \brief  Get the reserved field of Tpc Packet record
@@ -286,6 +287,26 @@ TpcPacket::getPacketReserved (pdd::record::TpcPacket const *packet)
    return       TpcPacketHeader::getPacketReserved (hdr);
 }
 /* ---------------------------------------------------------------------- */
+
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief   Return a 64-bit pointer to the data
+  \return  A 64-bit pointer to the data
+
+  \param[in] body  Pointer to the 
+
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline uint64_t const *TpcPacketBody::
+getData (pdd::record::TpcPacketBody const *body)
+{
+   return body->m_w64;
+}
+/* ---------------------------------------------------------------------- */
+
 /*   END: TpcPacket                                                       */
 } /* END: namespace access                                                */
 } /* END: namespace pdd                                                   */

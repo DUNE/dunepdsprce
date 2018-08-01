@@ -1,14 +1,14 @@
 // -*-Mode: C++;-*-
 
-#ifndef PDD_TPCADCVECTOR_HH
-#define PDD_TPCADCVECTOR_HH
+#ifndef TPCCOMPRESSDEDCONTEXT_HH
+#define TPCCOMPRESSDEDCONTEXT_HH
 
 /* ---------------------------------------------------------------------- *//*!
  *
- *  @file     TpcAdcVector.hh
- *  @brief    Defines a data type for a vector of TPC ADCs
+ *  @file     TpcCompressedContext.hh
+ *  @brief    The decoding context
  *  @verbatim
- *                               Copyright 2017
+ *                               Copyright 2018
  *                                    by
  *
  *                       The Board of Trustees of the
@@ -18,17 +18,16 @@
  *  @endverbatim
  *
  *  @par Facility:
- *  pdd
+ *  proto-dune DAM 
  *
  *  @author
  *  <russell@slac.stanford.edu>
  *
  *  @par Date created:
- *  <2017/10/04>
+ *  <2018/07/17>
  *
  * @par Credits:
  * SLAC
- *
  *
 \* ---------------------------------------------------------------------- */
 
@@ -41,24 +40,31 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
-   2017.10.04 jjr Created
+   2018.07.17 jjr Created
   
 \* ---------------------------------------------------------------------- */
 
 
-#include "dam/util/AlignedAllocator.hh"
-#include <vector>
-#include <cstdint>
+#include "BFU.h"
 
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief Define an ADC vector in terms of a std::vector, but with an 
-         custom allocator to allocate cache-line aligned memory
+  \brief The decoding context
                                                                           */
 /* ---------------------------------------------------------------------- */
-typedef std::vector<int16_t, 
-                    pdd::AlignedAllocator<64, int16_t>> TpcAdcVector;
+class TpcCompressedContext
+{
+public:
+   TpcCompressedContext (BFU bfu, uint64_t const *buf, int nsamplesM1);
+
+public:
+   uint32_t     m_nbins;  /*!< Index of last non-zero bin          */
+   uint32_t m_firstAdcs;  /*!< First ADCs                          */
+   uint32_t   m_novrflw;  /*!< Number of bits in the overflow ADCs */
+   uint16_t  m_bins[64];  /*!< The histogram bins                  */
+};
 /* ---------------------------------------------------------------------- */
+
 
 #endif

@@ -40,6 +40,9 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.07.13 jjr Corrected Mask0:Id from 0x3ff -> 0x7ff.  There are 11 
+                  bits in the WIB identifier.  Also the Offset0::Crate
+                  was incorrect 18 -> 16.
    2017.10.18 jjr Separate defintion from implementation
    ---------- --  --------------------------------------
    2017.10.05 jjr Added transposeAdcs128xN. These are methods that optimize
@@ -400,7 +403,7 @@ protected:
                         /*-- The WIB Identifier, 11 bits, 3 subfields --- */
       Id        = 13,   /*!< Offset to the WIB identifier field           */
       Fiber     = 13,   /*!< Offset to the Fiber # WIB identifier subfield*/
-      Crate     = 18,   /*!< Offset to the Crate # WIB identifier subfield*/
+      Crate     = 16,   /*!< Offset to the Crate # WIB identifier subfield*/
       Slot      = 21,   /*!< Offset to the Slot  # WIB identifier subfield*/
                         /* ---------------------------------------------- */
 
@@ -433,7 +436,7 @@ protected:
 
                           /* -------------------------------------------- */
                           /*-- The WIB Identifier, 11 bits, 3 subfields - */
-      Id        = 0x3ff, /*!< Mask for the WIB identifier field           */
+      Id        = 0x7ff, /*!< Mask for the WIB identifier field           */
       Fiber     =   0x7, /*!< Mask for the Fiber # WIB identifier subfield*/
       Crate     =  0x1f, /*!< Mask for the Crate # WIB identifier subfield*/
       Slot      =   0x7, /*!< Mask for the Slot  # WIB identifier subfield*/

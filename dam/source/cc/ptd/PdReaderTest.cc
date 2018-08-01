@@ -99,10 +99,10 @@ Prms::Prms (int argc, char *const argv[])
 
 
 
-static void processFragment (uint64_t       const *buf);
-static void process        (TpcStreamUnpack const *tpc);
-static void processRaw     (TpcStreamUnpack const *tpc);
+static void processFragment  (uint64_t        const *buf);
+static void process          (TpcStreamUnpack const *tpc);
 
+static void processRaw       (TpcStreamUnpack const *tpc);
 
 /* ---------------------------------------------------------------------- */
 int main (int argc, char *const argv[])
@@ -202,7 +202,7 @@ static void processFragment (uint64_t const *buf)
       // ----------------------------------------------
       // Is this record an error-free TPC data fragment
       // ---------------------------------------------
-      if (df.isTpcNormal ())
+      if (df.isTpcNormal () || df.isTpcDamaged ())
       {
 
          printf ("Have TpcStream data type\n");
@@ -234,6 +234,35 @@ static void processFragment (uint64_t const *buf)
             processRaw (tpcStream);
          }
       }
+      else if (df.isTpcDamaged ())
+      {
+         printf ("TpcStream is damaged\n");
+
+         // ------------------------------------------------
+         // Having verified that this is a TPC data fragment
+         // can now convert it an analyze it as such
+         // ------------------------------------------------
+         TpcFragmentUnpack tpcFragment (df);
+
+         df.printHeader  ();
+         df.printTrailer ();
+         // --------------------------------------------
+         // Get the number and loop over the TPC streams
+         // --------------------------------------------
+         int nstreams = tpcFragment.getNStreams ();
+
+         for (int istream = 0; istream < nstreams; ++istream)
+         {
+            TpcStreamUnpack const *tpcStream = tpcFragment.getStream (istream);
+
+            // Only proccess with low level methods
+            printf ("\nTpcStream: %d/%d -- using low  level access methods\n",
+                    istream, nstreams);
+            processRaw (tpcStream);
+         }
+
+
+      }
       
       df.printTrailer ();
    }
@@ -256,12 +285,14 @@ static void process (TpcStreamUnpack const *tpcStream)
    // This is the WIB's Crate.Slot.Fiber
    // ----------------------------------
    TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
-   int                  nchannels = tpcStream->getNChannels ();
-   printf ("TpcStream: %1d.%1d.%1d  # channels = %4d\n",
+   int                  nchannels = tpcStream->getNChannels  ();
+   uint32_t                status = tpcStream->getStatus     ();
+   printf ("TpcStream: %1d.%1d.%1d  # channels = %4d status = %8.8" PRIx32 "\n",
            id.getCrate (),
            id.getSlot  (),
            id.getFiber (),
-           nchannels);
+           nchannels,
+           status);
 
 
 
@@ -287,8 +318,8 @@ static void process (TpcStreamUnpack const *tpcStream)
    // and channel order.
    // -------------------------------------------------------
    int     adcCnt = nchannels * trimmedNticks;
-   int  adcNBytes = adcCnt    * sizeof (uint16_t);
-   uint16_t *adcs = reinterpret_cast <decltype (adcs)>(malloc (adcNBytes));
+   int  adcNBytes = adcCnt    * sizeof (int16_t);
+   int16_t  *adcs = reinterpret_cast <decltype (adcs)>(malloc (adcNBytes));
 
    //printf ("Transposing data: allocated %u bytes @ %p\n", 
    //        adcNBytes, (void *)adcs);
@@ -349,6 +380,23 @@ static void process (TpcStreamUnpack const *tpcStream)
 #include "dam/access/TpcToc.hh"
 #include "dam/access/TpcPacket.hh"
 
+static unsigned int
+        processWibFrames (pdd::access::TpcPacketBody const &pktBdy,
+                          unsigned int                     pktType,
+                          unsigned int                      pktOff,
+                          unsigned int                      pktLen,
+                          int                               pktNum,
+                          int                           nWibFrames,
+                          uint64_t                      *predicted);
+
+static unsigned int
+       processCompressed (pdd::access::TpcPacketBody const &pktBdy,
+                          unsigned int                     pktType,
+                          unsigned int                      pktOff,
+                          unsigned int                      pktLen,
+                          int                               pktNum,
+                          uint64_t                      *predicted);
+
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -364,14 +412,16 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
    using namespace pdd::access;
 
    TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
-   TpcStream const        &stream = tpcStream->getStream ();
-   int                  nchannels = tpcStream->getNChannels ();
+   TpcStream const        &stream = tpcStream->getStream     ();
+   int                  nchannels = tpcStream->getNChannels  ();
+   uint32_t                status = tpcStream->getStatus     ();
 
-   printf ("TpcStream: %1d.%1d.%1d  # channels = %4d\n",
+   printf ("TpcStream: %1d.%1d.%1d  # channels = %4d status = %8.8" PRIx32 "\n",
            id.getCrate (),
            id.getSlot  (),
            id.getFiber (),
-           nchannels);
+           nchannels,
+           status);
 
 
    // -----------------------
@@ -391,119 +441,183 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
 
    uint64_t  predicted = 0;
    unsigned int errCnt = 0;
-   for (int ipkt = 0; ipkt < npkts; ++ipkt)
+   for (int pktNum = 0; pktNum < npkts; ++pktNum)
    {
-      TpcTocPacketDsc pktDsc (toc.getPacketDsc (ipkt));
-      unsigned int      o64 = pktDsc.getOffset64 ();
-      unsigned int  pktType = pktDsc.getType ();
-
+      TpcTocPacketDsc pktDsc (toc.getPacketDsc (pktNum));
+      unsigned int    pktOff = pktDsc.getOffset64 ();
+      unsigned int   pktType = pktDsc.getType ();
+      unsigned int    pktLen = pktDsc.getLen64 ();
+      uint64_t const    *ptr = pkts + pktOff;
       
       if (pktDsc.isWibFrame ())
       {
-         printf ("Have Wib frames\n");
+         unsigned nWibFrames = pktDsc.getNWibFrames ();
+
+         printf ("Packet[%2u:%1u(WibFrames ).%4d] = "
+                 " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n",
+                 pktNum, pktType, nWibFrames,
+                 ptr[0], ptr[1], ptr[2]);
+
+         errCnt += processWibFrames (pktBdy, 
+                                     pktType,
+                                     pktOff, 
+                                     pktLen,
+                                     pktNum,
+                                     nWibFrames,
+                                     &predicted);
+
+         if (errCnt)
+         {
+            printf ("Error\n");
+            exit (-1);
+         }
+      }
+      else if (pktDsc.isCompressed ())
+      {
+         printf ("Packet[%2u:%1u(Compressed).%4d] = "
+                 " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n",
+                 pktNum, pktType, pktLen,
+                 ptr[0], ptr[1], ptr[2]);
+
+         errCnt += processCompressed (pktBdy, 
+                                      pktType,
+                                      pktOff, 
+                                      pktLen,
+                                      pktNum,
+                                      &predicted);
+      }
+   }
+
+   return;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+   \brief  Process a packet of WIB frames
+   \return Number of errors encountered
+
+   \param[in]     pktBdy The packet of WIB frames to process
+   \param[in]    pktType The packet type (usually WibFrame), but if not
+                         output will be transcoded to WibFrames
+   \param[in]     pktOff The 64-bit offset of start of the WIB frames
+   \param[in]     pktLen The length of the packet in units of 64-bit words
+   \param[in] nWibFrames The number of WIB frames
+   \param[in]  predicted The predicted timestamp
+                                                                          */
+/* ---------------------------------------------------------------------- */
+static unsigned int 
+       processWibFrames (pdd::access::TpcPacketBody const &pktBdy,
+                         unsigned int                     pktType,
+                         unsigned int                      pktOff,
+                         unsigned int                      pktLen,
+                         int                               pktNum,
+                         int                           nWibFrames,
+                         uint64_t                      *predicted)
+{
+   using namespace pdd;
+   using namespace pdd::access;
+
+   unsigned int errCnt = 0;
+
+   // -----------------------------------------------------------------
+   // Locate the WibFrames
+   // This is really cheating, since the raw wib frame is exposed to
+   // the user.  All others accessors hid the underlying implemenation.
+   // -----------------------------------------------------------------
+   WibFrame const *wf = pktBdy.getWibFrames (pktType, pktOff);
+
+   uint64_t expTimestamp = *predicted;
+
+   for (int iwf = 0; iwf < nWibFrames; ++iwf)
+   {
+      auto hdr       = wf->getHeader ();
+      auto commaChar = wf->getCommaChar (hdr);
+      auto version   = wf->getVersion   (hdr);
+      auto id        = wf->getId        (hdr);
+      auto fiber     = wf->getFiber     (hdr);
+      auto crate     = wf->getCrate     (hdr);
+      auto slot      = wf->getSlot      (hdr);
+      auto reserved  = wf->getReserved  (hdr);
+      auto wiberrors = wf->getWibErrors (hdr);
+      auto timestamp = wf->getTimestamp ();
+
+      if (timestamp != expTimestamp && (expTimestamp != 0))
+      {
+         errCnt += 1;
+         printf ("Error %2d.%3d @ %4d %16.16" PRIx64 " != %16.16" PRIx64 "\n", 
+                 errCnt, pktNum, iwf, timestamp, expTimestamp);
       }
 
-      unsigned nWibFrames = pktDsc.getNWibFrames ();
+      expTimestamp = timestamp + 25;
 
-      uint64_t const *ptr = pkts + o64;
-      printf ("Packet[%2u:%1u.%4d] = "
-              " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n",
-              ipkt, pktType, nWibFrames,
-              ptr[0], ptr[1], ptr[2]);
+      // ----------------------------------------------------------
+      // The const & are necessary to make sure this is a reference
+      // ----------------------------------------------------------
+      auto const &colddata = wf->getColdData ();
+      
+      auto cvt0 = colddata[0].getConvertCount ();
+      auto cvt1 = colddata[1].getConvertCount ();
+      
+      puts   (
+         "Wf #  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
+         "---- -- -- ------------- ------- -------- ---------------- ---- ----");
+         
+      printf (
+         "%4u: %2.2x %2.2x %2.2x.%1.1x.%1.1x (%3.3x), %6.6x %8.8x %16.16" 
+         PRIx64 " %4.4x %4.4x\n",
+         iwf,
+         commaChar, version,
+         crate, slot, fiber, id,
+         reserved,
+         wiberrors,
+         timestamp,
+         cvt0, cvt1);
+      
+      ++wf;
 
-      // -----------------------------------------------------------------
-      // Locate the WibFrames
-      // This is really cheating, since the raw wib frame is exposed to
-      // the user.  All others accessors hid the underlying implemenation.
-      // -----------------------------------------------------------------
-      WibFrame const *wf = pktBdy.getWibFrames (pktType, o64);
 
-
-      for (unsigned iwf = 0; iwf < nWibFrames; ++iwf)
+      // ------------------------------------------------------
+      // Would rather use sizeof's on colddata, but, while gdb
+      // seems to get it right 
+      //    i.e sizeof (*colddata) / sizeof (colddata) = 2
+      // gcc gets 1
+      // ------------------------------------------------------
+      for (unsigned icd = 0;  icd < WibFrame::NColdData; ++icd)
       {
-         auto hdr       = wf->getHeader ();
-         auto commaChar = wf->getCommaChar (hdr);
-         auto version   = wf->getVersion   (hdr);
-         auto id        = wf->getId        (hdr);
-         auto fiber     = wf->getFiber     (hdr);
-         auto crate     = wf->getCrate     (hdr);
-         auto slot      = wf->getSlot      (hdr);
-         auto reserved  = wf->getReserved  (hdr);
-         auto wiberrors = wf->getWibErrors (hdr);
-         auto timestamp = wf->getTimestamp ();
-
-         if (timestamp != predicted && (predicted != 0))
-         {
-            errCnt += 1;
-            printf ("Error %2d.%3d @ %4d %16.16" PRIx64 " != %16.16" PRIx64 "\n", 
-                    errCnt, ipkt, iwf, timestamp, predicted);
-         }
-         predicted = timestamp + 25;
-
-         // ----------------------------------------------------------
-         // The const & are necessary to make sure this is a reference
-         // ----------------------------------------------------------
-         auto const &colddata = wf->getColdData ();
-
-         auto cvt0 = colddata[0].getConvertCount ();
-         auto cvt1 = colddata[1].getConvertCount ();
+         auto const   &cd = colddata[icd];
          
-         puts   (
-        "Wf #  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
-        "---- -- -- ------------- ------- -------- ---------------- ---- ----");
+         auto hdr0        = cd.getHeader0      ();
+         auto streamErrs  = cd.getStreamErrs   (hdr0);
+         auto reserved0   = cd.getReserved0    (hdr0);
+         auto checkSums   = cd.getCheckSums    (hdr0);
+         auto cvtCnt      = cd.getConvertCount (hdr0);
          
+         auto hdr1        = cd.getHeader1      ();
+         auto errRegister = cd.getErrRegister  (hdr1);
+         auto reserved1   = cd.getReserved1    (hdr1);
+         auto hdrs        = cd.getHdrs         (hdr1);
+         
+         auto const &packedAdcs = cd.locateAdcs12b ();
+         
+         puts   ("   iCd SE Rv  ChkSums  Cvt ErRg Rsvd      Hdrs\n"
+                 "   --- -- -- -------- ---- ---- ----  --------");
+            
          printf (
-            "%4u: %2.2x %2.2x %2.2x.%1.1x.%1.1x (%3.3x), %6.6x %8.8x %16.16" 
-            PRIx64 " %4.4x %4.4x\n",
-                 iwf,
-                 commaChar, version,
-                 crate, slot, fiber, id,
-                 reserved,
-                 wiberrors,
-                 timestamp,
-                 cvt0, cvt1);
+            "     %1x %2.2x %2.2x %8.8x %4.4x %4.4x %4.4x  %8.8" PRIx32 "\n",
+            icd, 
+            streamErrs,  reserved0, checkSums, cvtCnt,
+            errRegister, reserved1, hdrs);
+         
+         int16_t adcs[WibColdData::NAdcs];
+         cd.expandAdcs64x1 (adcs, packedAdcs);
 
-         ++wf;
-
-
-         // ------------------------------------------------------
-         // Would rather use sizeof's on colddata, but, while gdb
-         // seems to get it right 
-         //    i.e sizeof (*colddata) / sizeof (colddata) = 2
-         // gcc gets 1
-         // ------------------------------------------------------
-         for (unsigned icd = 0;  icd < WibFrame::NColdData; ++icd)
+         for (unsigned iadc = 0; iadc < WibColdData::NAdcs; iadc += 16)
          {
-            auto const   &cd = colddata[icd];
-            
-            auto hdr0        = cd.getHeader0      ();
-            auto streamErrs  = cd.getStreamErrs   (hdr0);
-            auto reserved0   = cd.getReserved0    (hdr0);
-            auto checkSums   = cd.getCheckSums    (hdr0);
-            auto cvtCnt      = cd.getConvertCount (hdr0);
-            
-            auto hdr1        = cd.getHeader1      ();
-            auto errRegister = cd.getErrRegister  (hdr1);
-            auto reserved1   = cd.getReserved1    (hdr1);
-            auto hdrs        = cd.getHdrs         (hdr1);
-            
-            auto const &packedAdcs = cd.locateAdcs12b ();
-            
-            puts   ("   iCd SE Rv  ChkSums  Cvt ErRg Rsvd      Hdrs\n"
-                    "   --- -- -- -------- ---- ---- ----  --------");
-            
             printf (
-               "     %1x %2.2x %2.2x %8.8x %4.4x %4.4x %4.4x  %8.8" PRIx32 "\n",
-               icd, 
-               streamErrs,  reserved0, checkSums, cvtCnt,
-               errRegister, reserved1, hdrs);
-            
-            uint16_t adcs[WibColdData::NAdcs];
-            cd.expandAdcs64x1 (adcs, packedAdcs);
-
-            for (unsigned iadc = 0; iadc < WibColdData::NAdcs; iadc += 16)
-            {
-               printf (
                "Chn%2x:"
                " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
                " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
@@ -514,12 +628,52 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
                adcs[iadc + 4], adcs[iadc + 5], adcs[iadc + 6], adcs[iadc + 7],
                adcs[iadc + 8], adcs[iadc + 9], adcs[iadc +10], adcs[iadc +11],
                adcs[iadc +12], adcs[iadc +13], adcs[iadc +14], adcs[iadc +15]);
-            }
          }
-         putchar ('\n');
-      }      
-   }
+      }
 
-   return;
+      putchar ('\n');
+   }      
+
+   *predicted = expTimestamp;
+
+   return errCnt;
 }
 /* ---------------------------------------------------------------------- */
+
+
+#include "dam/access/TpcCompressed.hh"
+
+/* ---------------------------------------------------------------------- *//*!
+
+   \brief  Process a packet of WIB frames
+   \return Number of errors encountered
+
+   \param[in]     pktBdy The packet of WIB frames to process
+   \param[in]    pktType The packet type (usually WibFrame), but if not
+                         output will be transcoded to WibFrames
+   \param[in]     pktOff The 64-bit offset of start of the WIB frames
+   \param[in]     pktLen The length of the packet in units of 64-bit words
+   \param[in]  predicted The predicted timestamp
+                                                                          */
+/* ---------------------------------------------------------------------- */
+static unsigned int
+       processCompressed (pdd::access::TpcPacketBody const &pktBdy,
+                          unsigned int                     pktType,
+                          unsigned int                      pktOff,
+                          unsigned int                      pktLen,
+                          int                               pktNum,
+                          uint64_t                      *predicted)
+{
+   using namespace pdd;
+   using namespace pdd::access;
+
+   pdd::record::TpcCompressedHdrHeader const
+      *rhdr = reinterpret_cast
+      <pdd::record::TpcCompressedHdrHeader const *>(pktBdy.getData() + pktOff);
+
+   TpcCompressedHdrHeader const header(rhdr);
+
+   header.print (rhdr);
+
+   return 0;
+}

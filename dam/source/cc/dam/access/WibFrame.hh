@@ -100,8 +100,8 @@ public:
    
 
    // Expand on ColdData stream of 12-bit adcs -> 16-bits
-   void        expandAdcs64x1 (uint16_t        *dst) const;
-   void        expandAdcs64x1 (uint16_t *const *dst) const;
+   void        expandAdcs64x1 (int16_t        *dst) const;
+   void        expandAdcs64x1 (int16_t *const *dst) const;
 
 
    /* ---------------------------------------------------------- *\
@@ -162,7 +162,7 @@ public:
    static unsigned int getHdr          (uint32_t header1, int idx);
 
    // Expand on the specified stream of 12-bit adcs -> 16-bits
-   static void  expandAdcs64x1     (uint16_t              *dst,
+   static void  expandAdcs64x1     (int16_t               *dst,
                                     uint64_t  const (&src)[12]);
 
 public:
@@ -217,7 +217,7 @@ public:
    WibColdData const (& getColdData  () const)[2];
    WibColdData       (& getColdData  ()      )[2];
 
-   void              expandAdcs128x1 (uint16_t *dst) const;
+   void              expandAdcs128x1 (int16_t *dst) const;
 
    
    static unsigned int getCommaChar (uint64_t     header);
@@ -236,11 +236,11 @@ public:
 
    
    // Get all 128 channels for 1 frame */
-   static void expandAdcs128x1      (uint16_t             *dst,
+   static void expandAdcs128x1      (int16_t              *dst,
                                      uint64_t const (&src)[12]);
 
    // Get all 128 channels for N frames */
-   static void expandAdcs128xN      (uint16_t             *dst,
+   static void expandAdcs128xN      (int16_t              *dst,
                                      WibFrame const    *frames,
                                      int               nframes);
 
@@ -250,25 +250,25 @@ public:
 
    // Transpose any arbitrary number of frames using the mose
    // optimal technique
-   static void transposeAdcs128xN   (uint16_t             *dst,
+   static void transposeAdcs128xN   (int16_t              *dst,
                                      int            ndstStride,
                                      WibFrame const    *frames,
                                      int               nframes);
 
    // Transpose 128 adcs x 8 time samples
-   static void transposeAdcs128x8N  (uint16_t             *dst,
+   static void transposeAdcs128x8N  (int16_t              *dst,
                                      int            ndstStride,
                                      WibFrame const    *frames,
                                      int               nframes);
 
    // Transpose 128 adcs x 16*N time samples
-   static void transposeAdcs128x16N (uint16_t             *dst,
+   static void transposeAdcs128x16N (int16_t              *dst,
                                      int            ndstStride,
                                      WibFrame const    *frames,
                                      int               nframes);
 
    // Transpose 128 adcs x 32*N time samples
-   static void transposeAdcs128x32N (uint16_t             *dst,
+   static void transposeAdcs128x32N (int16_t              *dst,
                                      int            ndstStride,
                                      WibFrame const    *frames,
                                      int               nframes);
@@ -281,25 +281,25 @@ public:
 
    // Transpose any arbitrary number of frames using the mose
    // optimal technique
-   static void transposeAdcs128xN   (uint16_t *const  dst[128],
+   static void transposeAdcs128xN   (int16_t  *const  dst[128],
                                      int            ndstStride,
                                      WibFrame  const   *frames,
                                      int               nframes);
 
    // Transpose 128 adcs x 8 time samples
-   static void transposeAdcs128x8N  (uint16_t *const  dst[128],
+   static void transposeAdcs128x8N  (int16_t  *const  dst[128],
                                      int            ndstStride,
                                      WibFrame  const   *frames,
                                      int               nframes);
 
    // Transpose 128 adcs x 16*N time samples
-   static void transposeAdcs128x16N (uint16_t *const  dst[128],
+   static void transposeAdcs128x16N (int16_t  *const  dst[128],
                                      int            ndstStride,
                                      WibFrame  const   *frames,
                                      int               nframes);
 
    // Transpose 128 adcs x 32*N time samples
-   static void transposeAdcs128x32N (uint16_t *const  dst[128],
+   static void transposeAdcs128x32N (int16_t  *const  dst[128],
                                      int            ndstStride,
                                      WibFrame  const   *frames,
                                      int               nframes);
@@ -439,7 +439,7 @@ inline unsigned int WibColdData::getConvertCount () const { return getConvertCou
 inline unsigned int WibColdData::getCheckSumA    () const  { return getCheckSumA   (m_w0); }
 inline unsigned int WibColdData::getCheckSumB    () const  { return getCheckSumB   (m_w0); }
 
-inline void         WibColdData::expandAdcs64x1 (uint16_t *dst) const
+inline void         WibColdData::expandAdcs64x1 (int16_t *dst) const
 {
    uint64_t const (&src)[12] = locateAdcs12b ();
    expandAdcs64x1 (dst, src);

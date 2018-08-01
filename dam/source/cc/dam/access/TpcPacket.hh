@@ -181,8 +181,7 @@ public:
    uint32_t                                 getBridge () const;
    unsigned int                             getFormat () const;
    uint32_t                                 getNbytes () const;
-
-   uint64_t                   const          *getData () const;
+   uint64_t                   const         *getData  () const;
 
    pdd::access::WibFrame        const  
            *getWibFrames (unsigned int type,
@@ -193,7 +192,8 @@ public:
                           unsigned int                      type,
                           unsigned int                      o64);
 
-   static unsigned int getPacketReserved ();
+   static  unsigned int   getPacketReserved ();
+   static uint64_t const *getData (pdd::record::TpcPacketBody const *body);
 
 private:
    pdd::record::TpcPacketBody const *m_body;
@@ -256,9 +256,9 @@ public:
    // ------------------------------------------------------------------
    // Access to TpcPacketBody  elements
    // ---------------------------------
-   uint64_t                     const *getData   () const;
-   pdd::access::WibFrame        const *getWibFrames    (unsigned int type,
-                                                        unsigned int  o64) const;
+   uint64_t                     const *getData       () const;
+   pdd::access::WibFrame        const *getWibFrames  (unsigned int type,
+                                                      unsigned int  o64) const;
 
    static pdd::access::WibFrame const * 
                     getWibFrames (pdd::record::TpcPacket const *packet,
@@ -521,6 +521,7 @@ TpcPacketBody::getWibFrames (unsigned int type,
    return TpcPacketBody::getWibFrames (m_body, type, o64);
 }
 /* ---------------------------------------------------------------------- */
+
 /* END: TpcPacketBody                                                     */
 /* ====================================================================== */
 

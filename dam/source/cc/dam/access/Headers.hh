@@ -40,6 +40,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.07.11 jjr Added definition of Header3
    2017.08.12 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -242,7 +243,7 @@ private:
 /* ---------------------------------------------------------------------- *//*!
 
   \class  Header 2
-  \brief  Generic format = 1 header
+  \brief  Generic format = 2 header
                                                                           */
 /* ---------------------------------------------------------------------- */
 class Header2
@@ -322,6 +323,94 @@ public:
 
 private:
    uint32_t m_w32;
+} __attribute__ ((packed));
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \class  Header 3
+  \brief  Generic format = 2 header
+                                                                          */
+/* ---------------------------------------------------------------------- */
+class Header3
+{
+public:
+   explicit Header3 () { return; }
+
+public:
+   Header3 (uint64_t w64) : m_w64 (w64) { return; }
+
+public:
+   uint64_t  retrieve () const { return            m_w64;  }
+   uint32_t getFormat () const { return getFormat (m_w64); }
+   uint32_t   getType () const { return   getType (m_w64); }
+   uint32_t    getN64 () const { return    getN64 (m_w64); }
+   uint32_t getNbytes () const { return getNbytes (m_w64); }
+   uint64_t getBridge () const { return getBridge (m_w64); }
+
+
+   static uint32_t getFormat (uint64_t w64);
+   static uint32_t getType   (uint64_t w64);
+   static uint32_t getN64    (uint32_t w64);
+   static uint32_t getNbytes (uint32_t w64);
+   static uint64_t getBridge (uint64_t w64);
+
+
+
+   /* ------------------------------------------------------------------- *//*!
+
+     \enum  class Size
+     \brief Enumerates the sizes of the Header bit fields.
+                                                                         */
+   /* ------------------------------------------------------------------ */
+   enum class Size: int
+   {
+      Format    =  4, /*!< Size of the format field                      */
+      Type      =  4, /*!< Size of the record/frame type    field        */
+      N64       = 16, /*!< Size of the length field                      */
+      Bridge    = 40  /*!< Size of the bridge word field                 */
+   };
+   /* ------------------------------------------------------------------ */
+
+
+
+   /* ------------------------------------------------------------------- *//*!
+
+     \enum  class Offset
+     \brief Enumerates the right justified offsets of the header bit 
+            fields.
+                                                                         */
+   /* ------------------------------------------------------------------ */
+   enum class Offset: int
+   {
+      Format    =  0, /*!< Offset of the format field                    */
+      Type      =  4, /*!< Offset of the frame type field                */
+      N64       =  8, /*!< Offset of the length field                    */
+      Bridge    =  8  /*!< Offset of the bridge word field               */
+   };
+   /* ------------------------------------------------------------------ */
+
+
+   /* ------------------------------------------------------------------- *//*!
+
+     \enum  class Offset
+     \brief Enumerates the right justified masks of the header bit fields.
+                                                                         */
+   /* ------------------------------------------------------------------ */
+   enum class Mask: uint64_t
+   {
+      Format    =      0x0000000f,
+      Type      =      0x0000000f,
+      N64       =      0x00000fff,
+      Bridge    =  0xffffffffffLL
+   };
+   /* ------------------------------------------------------------------ */
+
+
+private:
+   uint64_t m_w64;
 } __attribute__ ((packed));
 /* ---------------------------------------------------------------------- */
 
@@ -499,7 +588,40 @@ inline uint32_t Header2::getBridge (uint32_t w32)
    return PDD_EXTRACT32 (w32, Mask::Bridge, Offset::Bridge);
 }
 /* ---------------------------------------------------------------------- */
-/* END : Header1                                                          */
+/* END : Header2                                                          */
+/* ====================================================================== */
+
+
+
+/* ====================================================================== */
+/* IMPLEMENTATION : Header3                                               */
+/* ---------------------------------------------------------------------- */
+inline uint32_t Header3::getFormat (uint64_t w64)
+{
+   return PDD_EXTRACT64 (w64, Mask::Format, Offset::Format);
+}
+
+inline uint32_t Header3::getType (uint64_t w64)
+{
+   return PDD_EXTRACT64 (w64, Mask::Type, Offset::Type);
+}
+
+inline uint32_t Header3::getN64 (uint32_t w64)
+{
+   return PDD_EXTRACT64 (w64, Mask::N64, Offset::N64);
+}
+
+inline uint32_t Header3::getNbytes (uint32_t w64)
+{
+   return PDD_EXTRACT64 (w64, Mask::N64, Offset::N64) * sizeof (uint64_t);
+}
+
+inline uint64_t Header3::getBridge (uint64_t w64)
+{
+   return PDD_EXTRACT64 (w64, Mask::Bridge, Offset::Bridge);
+}
+/* ---------------------------------------------------------------------- */
+/* END : Header3                                                          */
 /* ====================================================================== */
 
 

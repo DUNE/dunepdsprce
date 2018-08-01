@@ -44,6 +44,8 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.07.13 jjr Used the reserved byte in the bridge word for the stream's
+                  status value.
    2017.10.07 jjr Created.  This is for methods that, for performance 
                   reasons are inlined for internal use and made external
                   for external use. 
@@ -96,7 +98,7 @@ namespace tpcstream_bridge
       Format    =  4,  /*!< Size of the bridge word's format field        */
       Csf       = 12,  /*!< Size of the Crate.Slot.Fiber field            */
       Left      =  8,  /*!< Size of the number of Tpc Records left        */
-      Reserved  =  8   /*!< Size of the reserved field                    */
+      Status    =  8   /*!< Size of the status field                      */
    };
    /* ------------------------------------------------------------------- */
 
@@ -112,7 +114,7 @@ namespace tpcstream_bridge
       Format   =  0, /*!< Offset to the bridge words's format field       */
       Csf      =  4, /*!< Offset to the Crate.Sloc.Fiber field            */  
       Left     = 16, /*!< Offset to the number of Tpc Records left        */
-      Reserved =  8  /*!< Offset to the reserved field                    */
+      Status   = 24  /*!< Offset to the status field                      */
    };
    /* ------------------------------------------------------------------- */
 
@@ -127,7 +129,7 @@ namespace tpcstream_bridge
       Format   = 0x0000000f,
       Csf      = 0x00000fff,
       Left     = 0x000000ff,
-       Reserved = 0x000000ff
+      Status   = 0x000000ff
     };
    /* ------------------------------------------------------------------- */
 }
@@ -196,6 +198,22 @@ TPCSTREAM_IMPL uint32_t TpcStreamHeader::Bridge::getCsf (uint32_t bridge)
                                  tpcstream_bridge::Offset::Csf);
 }
 /* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Returns the status word
+
+  \param[in] bridge The bridge word
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCSTREAM_IMPL uint32_t TpcStreamHeader::Bridge::getStatus (uint32_t bridge)
+{
+   return PDD_EXTRACT32 (bridge, tpcstream_bridge::Mask  ::Status, 
+                                 tpcstream_bridge::Offset::Status);
+}
+/* ---------------------------------------------------------------------- */
 }
 }
 
@@ -215,6 +233,7 @@ TPCSTREAM_IMPL uint32_t TpcStream::getCsf () const
 }
 /* ---------------------------------------------------------------------- */
 
+
 /* ---------------------------------------------------------------------- *//*!
 
   \brief  Returns the number of TpcStream records left in this array. The
@@ -225,6 +244,20 @@ TPCSTREAM_IMPL uint32_t TpcStream::getCsf () const
 TPCSTREAM_IMPL int TpcStream::getLeft () const 
 { 
    return getHeader ()->getLeft (); 
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Returns the TpcStream record's status
+  \return The TpcStream record's status
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCSTREAM_IMPL uint32_t TpcStream::getStatus () const 
+{ 
+   return getHeader ()->getStatus (); 
 }
 /* ---------------------------------------------------------------------- */
 }}

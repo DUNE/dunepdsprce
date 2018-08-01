@@ -46,6 +46,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.07.11 jjr Added isCompressed and getLen64
    2017.11.10 jjr Add getNWibFrames to return the number of WibFrames in
                   a packet.
    2017.08.07 jjr Created
@@ -313,6 +314,7 @@ TpcTocPacketDsc::getType (pdd::record::TpcTocPacketDsc dsc)
 /* ---------------------------------------------------------------------- */
 
 
+
 /* ---------------------------------------------------------------------- *//*!
 
   \brief  Returns the 64-bit offset of this data packet within the data
@@ -339,6 +341,8 @@ TpcTocPacketDsc::getOffset64 (pdd::record::TpcTocPacketDsc dsc)
   \brief  Tests whether the associated data packet is a raw WIB frame
   \retval == true,  if the associated data packet is a raw WIB frame
   \revval == false, if the associated data packet is not a raw WIB frame
+
+  \param[in] dsc The packet descriptor
                                                                           */
 /* ---------------------------------------------------------------------- */
 TPCTOC_IMPL bool TpcTocPacketDsc::isWibFrame (pdd::record::TpcTocPacketDsc dsc)
@@ -348,6 +352,25 @@ TPCTOC_IMPL bool TpcTocPacketDsc::isWibFrame (pdd::record::TpcTocPacketDsc dsc)
                    (pdd::record::TpcTocPacketDsc::Type::WibFrame));
 }
 /* ---------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Tests whether the associated data packet is compressed data
+  \retval == true,   if the associated data packet is compressed data
+  \revval == false,  if the associated data packet is not compressed data
+
+  \param[in] dsc The packet descriptor
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCTOC_IMPL bool TpcTocPacketDsc::isCompressed (pdd::record::TpcTocPacketDsc dsc)
+{
+   unsigned int type = getType (dsc);
+   return (type == static_cast<decltype (type)>
+                   (pdd::record::TpcTocPacketDsc::Type::Compressed));
+}
+/* ---------------------------------------------------------------------- */
+
 
 
 /* ---------------------------------------------------------------------- *//*!
@@ -403,13 +426,33 @@ TpcTocPacketDsc::getType (pdd::record::TpcTocPacketDsc const *dsc)
 
                                                                           */
 /* ---------------------------------------------------------------------- */
-TPCTOC_IMPL unsigned int
+TPCTOC_IMPL uint32_t
 TpcTocPacketDsc::getOffset64 (pdd::record::TpcTocPacketDsc const *dsc)
 {
    unsigned int o64 = getOffset64 (*dsc);
    return       o64;
 }
 /* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Returns the length, in units of 64-bit words, of this packet
+  \return The length, in units of 64-bit words, of this packet
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCTOC_IMPL uint32_t
+TpcTocPacketDsc::getLen64 (pdd::record::TpcTocPacketDsc const *dsc)
+{
+   unsigned int o64_beg = getOffset64 (dsc[0]);
+   unsigned int o64_end = getOffset64 (dsc[1]);
+   unsigned int   len64 = (o64_end - o64_beg);
+
+   return len64;
+}
+/* ---------------------------------------------------------------------- */
+
 
 
 /* ---------------------------------------------------------------------- *//*!
@@ -444,6 +487,22 @@ TpcTocPacketDsc::getNWibFrames (pdd::record::TpcTocPacketDsc const *dsc)
                         / (sizeof (pdd::record::WibFrame) /sizeof (uint64_t));
                         
    return nframes;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Tests whether the associated data packet is compressed data
+  \retval == true,   if the associated data packet is compressed data
+  \revval == false,  if the associated data packet is not compresed data
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCTOC_IMPL bool 
+TpcTocPacketDsc::isCompressed (pdd::record::TpcTocPacketDsc const *dsc)
+{
+   return isCompressed (*dsc);
 }
 /* ---------------------------------------------------------------------- */
 /*   END: TpcPacketDsc                                                    */

@@ -43,6 +43,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.07.26 jjr Changed ADC type to int16_t
    2017.10.04 jjr Changed the vector signatures from std::vector<uint16_t>
                   to TpcAdcVector.  This is still a std::vector, but 
                   allocates memory on cache line boundaries.
@@ -150,6 +151,8 @@ class TpcStreamUnpack
    // Identifier class to retrieve the crate, slot and fiber.
    // ------------------------------------------------------------------
    Identifier getIdentifier  () const;
+   uint32_t   getStatus      () const;
+
 
 
    // -------------------------------------------------------------------
@@ -198,12 +201,12 @@ class TpcStreamUnpack
    //        to save and restore a fair amount of context with each decode.
    //
    // ------------------------------------------------------------------------
-   bool getMultiChannelData          (uint16_t                  *adcs) const;
-   bool getMultiChannelData          (uint16_t                 **adcs) const;
+   bool getMultiChannelData          (int16_t                   *adcs) const;
+   bool getMultiChannelData          (int16_t                  **adcs) const;
    bool getMultiChannelData          (std::vector<TpcAdcVector> &adcs) const;
 
-   bool getMultiChannelDataUntrimmed (uint16_t  *adcs,     int nticks) const;
-   bool getMultiChannelDataUntrimmed (uint16_t **adcs,     int nticks) const;
+   bool getMultiChannelDataUntrimmed (int16_t   *adcs,     int nticks) const;
+   bool getMultiChannelDataUntrimmed (int16_t  **adcs,     int nticks) const;
    bool getMultiChannelDataUntrimmed (std::vector<TpcAdcVector> &adcs) const;
 
    // -----------------------

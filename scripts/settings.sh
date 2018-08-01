@@ -169,3 +169,7 @@ if [ -n "${PATH}" ]; then
 else
    export PATH=${install_path}/bin:
 fi
+
+
+export PDDAM_LIB_INC=${install_path}/include
+export PDDAM_LIB_LIB=${install_path}/lib

@@ -43,6 +43,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.07.11 jjr Corrected misspelling
    2017.10.16 jjr Moved from dam/access -> dam/records
    2017.08.07 jjr Created
   
@@ -154,7 +155,7 @@ public:
    enum class Size: int
    {
       Format    =  4, /*!< Size of the format field                       */
-      Type      =  4, /*!< Size fo the type field                         */  
+      Type      =  4, /*!< Size of the type field                         */  
       Offset64  = 24  /*!< Size of the offset field, in 64 bit units      */
    };
    /* ------------------------------------------------------------------- */

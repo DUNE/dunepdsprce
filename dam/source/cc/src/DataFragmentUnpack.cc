@@ -26,6 +26,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.03.23 jjr Added isTpcDamaged method
    2017.10.27 jjr Corrected getHeader (buf) routine. The way it was written
                   it called itself. 
    2017.08.29 jjr Created
@@ -88,6 +89,27 @@ bool DataFragmentUnpack::isTpcNormal () const
 {
    bool   isTpcNormal = m_df.isTpcNormal ();
    return isTpcNormal;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Test if this DataFragment is a damaged, \i.e. a TPC fragment 
+          with an error in one or more of its streams.
+
+  \retval true,   if this DataFragment is a damaged TPC fragment
+  \retval false,  if this DataFragment is not a damaged TPC fragment
+                                                                          */
+/* ---------------------------------------------------------------------- */
+bool DataFragmentUnpack::isTpcDamaged () const
+{
+   bool   isTpcDamaged = m_df.isTpcDamaged ();
+   return isTpcDamaged;
 }
 /* ---------------------------------------------------------------------- */
 

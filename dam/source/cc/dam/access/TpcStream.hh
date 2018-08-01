@@ -96,6 +96,7 @@ public:
    pdd::record::TpcPacket       const *getPacket () const;
    int                                 getLeft   () const;
    uint32_t                            getCsf    () const;
+   uint32_t                            getStatus () const;
 
 private:
    void                         const *getReserved (int idx) const;

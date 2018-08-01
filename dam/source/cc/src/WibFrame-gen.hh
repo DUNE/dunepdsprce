@@ -206,7 +206,7 @@ static inline uint64_t expandC_F (uint64_t w2)
   \param[in] src  The source address
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
+static inline void expandAdcs16x1_kernel (int16_t *dst, uint64_t const *src)
 {
    uint64_t *dst64 = reinterpret_cast<uint64_t *>(dst);
 
@@ -245,7 +245,7 @@ static inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
   \param[in] src  The source address
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline void expandAdcs64x1_kernel (uint16_t       *dst, 
+inline void expandAdcs64x1_kernel (int16_t        *dst, 
                                    uint64_t const *src)
 {
    expandAdcs16x1_kernel (dst+0*16, src+0*3);
@@ -273,7 +273,7 @@ inline void expandAdcs64x1_kernel (uint16_t       *dst,
    by expandhAdcs_init to do the initial shuffle
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline void expandAdcs16x4_kernel (uint16_t       *dst, 
+inline void expandAdcs16x4_kernel (int16_t        *dst, 
                                    uint64_t const *src)
 {
 #define STRIDE64 (sizeof (WibFrame) / sizeof (*src))
@@ -281,10 +281,10 @@ inline void expandAdcs16x4_kernel (uint16_t       *dst,
    /*
    puts ("Kernel 16x4");
    printf ("First %4.4x %4.4x %4.4x %4.4x\n",
-           ((uint16_t const *)src)[0*STRIDE/2],
-           ((uint16_t const *)src)[1*STRIDE/2],
-           ((uint16_t const *)src)[2*STRIDE/2],
-           ((uint16_t const *)src)[3*STRIDE/2]);
+           ((int16_t const *)src)[0*STRIDE/2],
+           ((int16_t const *)src)[1*STRIDE/2],
+           ((int16_t const *)src)[2*STRIDE/2],
+           ((int16_t const *)src)[3*STRIDE/2]);
    */
 
    expandAdcs16x1_kernel (dst+0*16, src+0*STRIDE64);
@@ -752,7 +752,7 @@ static void transposeAdcs16x4_kernel (uint64_t      *dst64,
   \param[ in]        src  The data source
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8_kernel (uint16_t       *dst, 
+static inline void transposeAdcs16x8_kernel (int16_t        *dst, 
                                              int      ndstStride,
                                              uint64_t const *src)
 {
@@ -926,7 +926,7 @@ static void transposeAdcs16x4_kernel (uint64_t *const *dst64,
   \param[ in]     src  The data source
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8_kernel (uint16_t *const *dst, 
+static inline void transposeAdcs16x8_kernel (int16_t  *const *dst, 
                                              int           offset, 
                                              uint64_t const  *src)
 {

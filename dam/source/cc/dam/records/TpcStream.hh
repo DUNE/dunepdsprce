@@ -62,6 +62,7 @@ public:
    int getFormat () const { return Bridge::getFormat (getBridge ()); }
    int getLeft   () const { return Bridge::getLeft   (getBridge ()); }
    int getCsf    () const { return Bridge::getCsf    (getBridge ()); }
+   int getStatus () const { return Bridge::getStatus (getBridge ()); }
       
 
    // -----------------------------------------
@@ -86,10 +87,12 @@ public:
       int             getFormat () const { return getFormat (m_w32); }
       int             getLeft   () const { return getLeft   (m_w32); }
       int             getCsf    () const { return getCsf    (m_w32); }
+      uint32_t        getStatus () const { return getStatus (m_w32); }
 
       static int      getFormat (uint32_t bridge);
       static int      getLeft   (uint32_t bridge);
       static uint32_t getCsf    (uint32_t bridge);
+      static uint32_t getStatus (uint32_t bridge);
 
    private:
       uint32_t m_w32;  /*!< Storage for the bridge word                   */

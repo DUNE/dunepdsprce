@@ -54,6 +54,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.03.23 jjr Added isTpcDamaged method
    2017.10.07 jjr Created.  This is for methods that, for performance 
                   reasons are inlined for internal use and made external
                   for external use. 
@@ -92,6 +93,25 @@ DATAFRAGMENT_IMPL bool DataFragment::isTpcNormal () const
    auto dfHeader    = getHeader ();
    bool isTpcNormal = dfHeader->isTpcNormal ();
    return isTpcNormal;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Test if this DataFragment is a damaged, \i.e. a TPC fragment 
+          with an error in one or more of its streams.
+
+  \retval true,   if this DataFragment is a damaged TPC fragment
+  \retval false,  if this DataFragment is not a damaged TPC fragment
+                                                                          */
+/* ---------------------------------------------------------------------- */
+DATAFRAGMENT_IMPL bool DataFragment::isTpcDamaged () const
+{
+   auto dfHeader     = getHeader ();
+   bool isTpcDamaged = dfHeader->isTpcDamaged ();
+   return isTpcDamaged;
 }
 /* ---------------------------------------------------------------------- */
 

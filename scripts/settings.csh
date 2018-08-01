@@ -172,3 +172,6 @@ else
 endif
 
 
+setenv PDDAM_LIB_INC ${install_path}/include
+setenv PDDAM_LIB_LIB ${install_path}/lib
+

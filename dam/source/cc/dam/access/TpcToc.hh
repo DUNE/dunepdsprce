@@ -43,6 +43,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.07.11 jjr Added isCompressed and getLen64
    2017.10.16 jjr Moved from dam/access -> dam/records
    2017.08.07 jjr Created
   
@@ -164,21 +165,26 @@ public:
    unsigned int                           getFormat () const;
    unsigned int                             getType () const;
    uint32_t                             getOffset64 () const;
+   uint32_t                                getLen64 () const;
    bool                                  isWibFrame () const;
    unsigned int                       getNWibFrames () const;
+   bool                                isCompressed () const;
 
 
    static unsigned int     getFormat (pdd::record::TpcTocPacketDsc const *dsc);
    static unsigned int       getType (pdd::record::TpcTocPacketDsc const *dsc);
    static uint32_t       getOffset64 (pdd::record::TpcTocPacketDsc const *dsc);
+   static uint32_t          getLen64 (pdd::record::TpcTocPacketDsc const *dsc);
    static bool            isWibFrame (pdd::record::TpcTocPacketDsc const *dsc);
    static unsigned int getNWibFrames (pdd::record::TpcTocPacketDsc const *dsc);
+   static bool          isCompressed (pdd::record::TpcTocPacketDsc const *dsc);
 
 
    static unsigned int getFormat (pdd::record::TpcTocPacketDsc dsc);
    static unsigned int   getType (pdd::record::TpcTocPacketDsc dsc);
    static uint32_t   getOffset64 (pdd::record::TpcTocPacketDsc dsc);
    static bool        isWibFrame (pdd::record::TpcTocPacketDsc dsc);
+   static bool      isCompressed (pdd::record::TpcTocPacketDsc dsc);
 
 
 /* ---------------------------------------------------------------------- */
@@ -499,12 +505,38 @@ inline uint32_t TpcTocPacketDsc::getOffset64 () const
 
 /* ---------------------------------------------------------------------- *//*!
 
+  \brief Returns the length, in units of 64-bits words of this packet
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline unsigned int TpcTocPacketDsc::getLen64 () const
+{
+   return getLen64 (m_dsc);
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
   \brief Tests if the packet format is a raw Wib Frame
                                                                           */
 /* ---------------------------------------------------------------------- */
 inline bool TpcTocPacketDsc::isWibFrame () const
 {
    return isWibFrame (m_dsc);
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Tests if the packet format is compresed data
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline bool TpcTocPacketDsc::isCompressed () const
+{
+   return isCompressed (m_dsc);
 }
 /* ---------------------------------------------------------------------- */
 

@@ -51,57 +51,57 @@
 using namespace pdd::access;
 
 
-static void create_tc     (uint16_t               *patterns,
+static void create_tc     (int16_t               *patterns,
                            int                    npatterns);
 
-static void create_random (uint16_t               *patterns,
+static void create_random (int16_t                *patterns,
                            int                    npatterns);
 
 
 static void fill16        (uint64_t                   *srcs,
-                           uint16_t const         *patterns) __attribute__((unused));
+                           int16_t const          *patterns) __attribute__((unused));
 
 static void fill64        (uint64_t                   *srcs,
-                           uint16_t const         *patterns) __attribute__((unused));
+                           int16_t const          *patterns) __attribute__((unused));
 
 static void fill         (WibFrame                 *frames,
                           int                      nframes,
-                          uint16_t const         *patterns);
+                          int16_t const          *patterns);
 
 
-static void test_integrity         (uint16_t                 *dstBuf, 
+static void test_integrity         (int16_t                  *dstBuf, 
                                     WibFrame const           *frames,
                                     int            nframes_per_trial,
                                     int                      ntrials,
-                                    uint16_t const         *patterns,
+                                    int16_t const          *patterns,
                                     int          npatterns_per_trial,
                                     int                    npatterns)
                                               __attribute__((unused));
 
-static void test_performance       (uint16_t                 *dstBuf, 
+static void test_performance       (int16_t                  *dstBuf, 
                                     WibFrame         const   *frames,
                                     int            nframes_per_trial,
                                     int                      ntrials,
-                                    uint16_t         const *patterns,
+                                    int16_t          const *patterns,
                                     int          npatterns_per_trial,
                                     int                    npatterns) 
                                               __attribute__((unused));
 
 
-static void test_integrityPtrArray (uint16_t       *const  *dstPtrs, 
+static void test_integrityPtrArray (int16_t        *const  *dstPtrs, 
                                     WibFrame        const   *frames,
                                     int           nframes_per_trial,
                                     int                     ntrials,
-                                    uint16_t        const *patterns,
+                                    int16_t         const *patterns,
                                     int         npatterns_per_trial,
                                     int                   npatterns)
                                              __attribute__((unused));
 
-static void test_performancePtrArray (uint16_t     *const  *dstPtrs, 
+static void test_performancePtrArray (int16_t      *const  *dstPtrs, 
                                       WibFrame      const   *frames,
                                       int          frames_per_trial,
                                       int                   ntrials,
-                                      uint16_t      const *patterns,
+                                      int16_t       const *patterns,
                                       int       npatterns_per_trial,
                                       int                 npatterns)
                                              __attribute__((unused));
@@ -111,7 +111,7 @@ static void test_integrityVector    (std::vector<TpcAdcVector>     *dstVecs,
                                      WibFrame               const   *frames,
                                     int                   nframes_per_trial,
                                     int                             ntrials,
-                                    uint16_t                const *patterns,
+                                    int16_t                 const *patterns,
                                     int                 npatterns_per_trial,
                                     int                           npatterns) 
                                                      __attribute__((unused));
@@ -121,25 +121,25 @@ static void test_performanceVector  (std::vector<TpcAdcVector>
                                      WibFrame               const   *frames,
                                      int                  nframes_per_trial,
                                      int                            ntrials,
-                                     uint16_t               const *patterns,
+                                     int16_t                const *patterns,
                                      int                npatterns_per_trial,
                                      int                          npatterns)
                                                      __attribute__((unused));
 
 
-static int check_expansion   (uint16_t const   *results, 
-                              uint16_t const  *patterns,
-                              int             npatterns) __attribute__((unused));
+static int check_expansion   (int16_t const   *results, 
+                              int16_t const  *patterns,
+                              int            npatterns) __attribute__((unused));
 
-static int check_transpose   (uint16_t const   *results,
-                              uint16_t const  *patterns,
-                              int             nchannels,
-                              int                stride) __attribute__((unused));
+static int check_transpose   (int16_t const   *results,
+                              int16_t const  *patterns,
+                              int            nchannels,
+                              int               stride) __attribute__((unused));
 
-static int check_transpose  (uint16_t *const  *results,
-                             uint16_t  const  *patterns,
-                             int              nchannels,
-                             int                nframes) __attribute__((unused));
+static int check_transpose  (int16_t *const  *results,
+                             int16_t  const  *patterns,
+                             int             nchannels,
+                             int               nframes) __attribute__((unused));
 
    
 
@@ -149,7 +149,7 @@ static void print  (char            const     *title,
                     int                      ntrials,
                     int                    npatterns) __attribute__((unused));
 
-typedef void  (*CreateMethod)(uint16_t *patterns, int npatterns);
+typedef void  (*CreateMethod)(int16_t *patterns, int npatterns);
 
 struct TestPattern
 {
@@ -190,10 +190,10 @@ int main (int argc, char *const argv[])
    #define NPATTERNS           (NPATTERNS_PER_TRIAL * NTRIALS)
    #define NFRAMES             (NFRAMES_PER_TRIAL   * NTRIALS)
 
-   uint16_t  *patterns = (uint16_t *)memAlign (64, sizeof (*patterns) * NPATTERNS);
-   uint16_t    *dstBuf = (uint16_t *)memAlign (64, sizeof (*dstBuf  ) * NPATTERNS);
-   WibFrame    *frames = (WibFrame *)memAlign (64, sizeof (*frames  ) *   NFRAMES);
-   uint16_t  *dstPtrs[NCHANNELS_PER_FRAME * NTRIALS];
+   int16_t  *patterns = (int16_t  *)memAlign (64, sizeof (*patterns) * NPATTERNS);
+   int16_t    *dstBuf = (int16_t  *)memAlign (64, sizeof (*dstBuf  ) * NPATTERNS);
+   WibFrame   *frames = (WibFrame *)memAlign (64, sizeof (*frames  ) *   NFRAMES);
+   int16_t  *dstPtrs[NCHANNELS_PER_FRAME * NTRIALS];
       
    int            npatterns = NPATTERNS;
    int              ntrials = NTRIALS;
@@ -208,9 +208,9 @@ int main (int argc, char *const argv[])
    // -------------------------------------------------------
    for (unsigned int idx = 0; idx < sizeof (dstPtrs) / sizeof (*dstPtrs); ++idx)
    {
-      dstPtrs[idx] = (uint16_t *)memAlign (64,
-                                           nframes_per_trial 
-                                         * sizeof (*dstPtrs[idx]));
+      dstPtrs[idx] = (int16_t *)memAlign (64,
+                                          nframes_per_trial 
+                                        * sizeof (*dstPtrs[idx]));
       //dstPtrs[idx] = dstBuf + idx * nframes_per_trial;
    }
 
@@ -406,7 +406,7 @@ static void print_integrity (char const *title, int nerrs, int npatterns)
   \param[ in] nframes The number of frames to transpose
                                                                           */
 /* ---------------------------------------------------------------------- */
-typedef void (*TransposeMethod) (uint16_t          *dst, 
+typedef void (*TransposeMethod) (int16_t           *dst, 
                                  int             stride, 
                                  WibFrame const *frames, 
                                  int            nframes);
@@ -446,11 +446,11 @@ TransposeTest TransposeTests[3] =
 
 
 /* ---------------------------------------------------------------------- */
-static void test_integrity (uint16_t         *dstBuf, 
+static void test_integrity (int16_t          *dstBuf, 
                             WibFrame const   *frames,
                             int    nframes_per_trial,
                             int              ntrials,
-                            uint16_t const *patterns,
+                            int16_t  const *patterns,
                             int  npatterns_per_trial,
                             int            npatterns)
 {
@@ -484,11 +484,11 @@ static void test_integrity (uint16_t         *dstBuf,
 
 
 /* ---------------------------------------------------------------------- */
-static void test_performance (uint16_t         *dstBuf, 
+static void test_performance (int16_t          *dstBuf, 
                               WibFrame const*framesSrc,
                               int    nframes_per_trial,
                               int              ntrials,
-                              uint16_t const *patterns,
+                              int16_t const  *patterns,
                               int  npatterns_per_trial,
                               int            npatterns)
 {
@@ -501,7 +501,7 @@ static void test_performance (uint16_t         *dstBuf,
    {
    memset (dstBuf, 0xff, sizeof (*dstBuf) * NPATTERNS); 
 
-   uint16_t          *dst = dstBuf;
+   int16_t           *dst = dstBuf;
    WibFrame const *frames = framesSrc;
 
    for (int itrial = 0; itrial < ntrials; ++itrial) 
@@ -535,7 +535,7 @@ static void test_performance (uint16_t         *dstBuf,
 
       for (int itrial = 0; itrial < ntrials; ++itrial) 
       {
-         uint16_t             *dst = dstBuf + npatterns_per_trial * itrial;
+         int16_t              *dst = dstBuf + npatterns_per_trial * itrial;
          WibFrame const    *frames = framesSrc;
 
 
@@ -573,8 +573,8 @@ static void test_performance (uint16_t         *dstBuf,
    \param chn[in] The Adc channel number
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void print_adcs (uint16_t const *d, int chn)  __attribute ((unused));
-static void print_adcs (uint16_t const *d, int chn) 
+static void print_adcs (int16_t const *d, int chn)  __attribute ((unused));
+static void print_adcs (int16_t const *d, int chn) 
 {
    for (int idx = 0; idx < 64; idx += 8)
    {
@@ -608,7 +608,7 @@ static void print_adcs (uint16_t const *d, int chn)
   \param[ in] nframes The number of frames to transpose
                                                                           */
 /* ---------------------------------------------------------------------- */
-typedef void (*TransposePtrArrayMethod) (uint16_t *const   *dst, 
+typedef void (*TransposePtrArrayMethod) (int16_t *const    *dst, 
                                          int             offset,
                                          WibFrame const *frames, 
                                          int            nframes);
@@ -642,7 +642,7 @@ struct TransposePtrArrayTest
   \param[ in]   nframes The number of entries in each channel memory.
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void reset (uint16_t *const *dstPtrs, 
+static void reset (int16_t  *const *dstPtrs, 
                    int            nchannels, 
                    int              nframes)
 {
@@ -679,11 +679,11 @@ TransposePtrArrayTest TransposePtrArrayTests[3] =
 
 
 /* ---------------------------------------------------------------------- */
-static void test_integrityPtrArray (uint16_t *const *dstPtrs, 
+static void test_integrityPtrArray (int16_t  *const *dstPtrs, 
                                     WibFrame const   *frames,
                                     int    nframes_per_trial,
                                     int              ntrials,
-                                    uint16_t const *patterns,
+                                    int16_t const  *patterns,
                                     int  npatterns_per_trial,
                                     int            npatterns)
 {
@@ -713,11 +713,11 @@ static void test_integrityPtrArray (uint16_t *const *dstPtrs,
 
 
 /* ---------------------------------------------------------------------- */
-static void test_performancePtrArray (uint16_t *const *dstPtrs, 
+static void test_performancePtrArray (int16_t  *const *dstPtrs, 
                                       WibFrame const*framesSrc,
                                       int    nframes_per_trial,
                                       int              ntrials,
-                                      uint16_t const *patterns,
+                                      int16_t  const *patterns,
                                       int  npatterns_per_trial,
                                       int            npatterns)
 {
@@ -738,7 +738,7 @@ static void test_performancePtrArray (uint16_t *const *dstPtrs,
       reset (dstPtrs, nchannels * ntrials, nframes_per_trial);
 
 
-      uint16_t *const    *dst = dstPtrs;
+      int16_t  *const    *dst = dstPtrs;
       WibFrame  const *frames = framesSrc;
       for (int itrial = 0; itrial < ntrials; ++itrial) 
       {
@@ -790,10 +790,10 @@ static void reset (std::vector<TpcAdcVector> *dstVecs)
       int       nframes = vec.capacity ();
       void       *data  = vec.data ();
       //printf ("Clearing dstVecs[%d] @%p for nbytes = %d\n",
-      //        ichan, data, (int)sizeof (uint16_t) * nframes);
+      //        ichan, data, (int)sizeof (int16_t) * nframes);
       memset (data,
               0xff, 
-              sizeof (uint16_t) * nframes);
+              sizeof (int16_t) * nframes);
    }
 
    return;
@@ -817,7 +817,7 @@ static void reset (std::vector<TpcAdcVector> *dstVecs)
   \param[ in] nframes The number of frames to transpose
                                                                           */
 /* ---------------------------------------------------------------------- */
-typedef void (*TransposeVectorMethod) (uint16_t *const   *dst, 
+typedef void (*TransposeVectorMethod) (int16_t  *const   *dst, 
                                        int             offset,
                                        WibFrame const *frames, 
                                        int            nframes);
@@ -861,7 +861,7 @@ static void test_integrityVector    (std::vector<TpcAdcVector>
                                      WibFrame               const   *frames,
                                      int                   nframes_per_trial,
                                      int                             ntrials,
-                                     uint16_t                const *patterns,
+                                     int16_t                 const *patterns,
                                      int                 npatterns_per_trial,
                                      int                           npatterns)
 {
@@ -871,7 +871,7 @@ static void test_integrityVector    (std::vector<TpcAdcVector>
 
 
    //printf ("Nchannels.nframes = %d.%d\n", nchannels, nframes_per_trial);
-   uint16_t **dstPtrs = (uint16_t **)::malloc (nchannels * sizeof (*dstPtrs));
+   int16_t **dstPtrs = (int16_t **)::malloc (nchannels * sizeof (*dstPtrs));
 
 
    for (int ichan = 0; ichan < nchannels; ++ichan)
@@ -910,7 +910,7 @@ static void test_performanceVector  (std::vector<TpcAdcVector>
                                      WibFrame              const *framesSrc,
                                      int                  nframes_per_trial,
                                      int                            ntrials,
-                                     uint16_t              const  *patterns,
+                                     int16_t               const  *patterns,
                                      int                npatterns_per_trial,
                                      int                          npatterns) 
 {
@@ -919,7 +919,7 @@ static void test_performanceVector  (std::vector<TpcAdcVector>
 
    struct timeval  dif[NTRIALS];
 
-   uint16_t **dstPtrs = (uint16_t **)::malloc (nchannels * ntrials * sizeof (*dstPtrs));
+   int16_t **dstPtrs = (int16_t **)::malloc (nchannels * ntrials * sizeof (*dstPtrs));
 
    //printf ("Nchannels.nframes = %d.%d\n", nchannels, nframes_per_trial);
 
@@ -936,7 +936,7 @@ static void test_performanceVector  (std::vector<TpcAdcVector>
 
       int jchan = 0;
 
-      uint16_t                  **dst = dstPtrs;
+      int16_t                   **dst = dstPtrs;
       std::vector<TpcAdcVector> *vecs = dstVecs;
       WibFrame  const         *frames = framesSrc;
       for (int itrial = 0; itrial < ntrials; ++itrial) 
@@ -986,11 +986,11 @@ static void test_performanceVector  (std::vector<TpcAdcVector>
   \param[in] npatterns  The number of patterns
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void create_tc (uint16_t *patterns, int npatterns)
+static void create_tc (int16_t *patterns, int npatterns)
 {
    for (int itime = 0; itime < npatterns/128; ++itime)
    {
-      uint16_t p = (itime << 4) & 0x0ff0;
+      int16_t p = (itime << 4) & 0x0ff0;
       for (int ichan = 0; ichan < 128; ++ichan)
       {
          *patterns++ = p | (ichan & 0xf);
@@ -1104,12 +1104,12 @@ This is what we wanted               .cba.987.654.321
   \param[in] npatterns  The number of patterns
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void create_random (uint16_t *patterns, int npatterns)
+static void create_random (int16_t *patterns, int npatterns)
 {
    srand (0xdeadbeef);
    for (int idx = 0; idx < npatterns; ++idx)
    {
-      uint16_t      p = rand () & 0xfff;
+      int16_t      p = rand () & 0xfff;
       *patterns++ = p;
    }
 }
@@ -1117,33 +1117,33 @@ static void create_random (uint16_t *patterns, int npatterns)
 
 
 
-static inline uint64_t packA (uint16_t v0, 
-                              uint16_t v1,
-                              uint16_t v2,
-                              uint16_t v3,
-                              uint16_t v4,
-                              uint16_t v5);
+static inline uint64_t packA (int16_t v0, 
+                              int16_t v1,
+                              int16_t v2,
+                              int16_t v3,
+                              int16_t v4,
+                              int16_t v5);
 
 
-static inline uint64_t packB (uint16_t v4, 
-                              uint16_t v5,
-                              uint16_t v6,
-                              uint16_t v7,
-                              uint16_t v8,
-                              uint16_t v9,
-                              uint16_t vA,
-                              uint16_t vB);
+static inline uint64_t packB (int16_t v4, 
+                              int16_t v5,
+                              int16_t v6,
+                              int16_t v7,
+                              int16_t v8,
+                              int16_t v9,
+                              int16_t vA,
+                              int16_t vB);
 
 
-static inline uint64_t packC (uint16_t vA, 
-                              uint16_t vB,
-                              uint16_t vC,
-                              uint16_t vD,
-                              uint16_t vE,
-                              uint16_t vF);
+static inline uint64_t packC (int16_t vA, 
+                              int16_t vB,
+                              int16_t vC,
+                              int16_t vD,
+                              int16_t vE,
+                              int16_t vF);
 
 /* ---------------------------------------------------------------------- */
-static void fill (WibFrame *frames, int nframes, uint16_t const *patterns)
+static void fill (WibFrame *frames, int nframes, int16_t const *patterns)
 {
    for (int iframe = 0; iframe < nframes; iframe++)
    {
@@ -1162,10 +1162,10 @@ static void fill (WibFrame *frames, int nframes, uint16_t const *patterns)
 
 
 /* ---------------------------------------------------------------------- */
-static void fill16 (uint64_t *src, uint16_t const *patterns)
+static void fill16 (uint64_t *src, int16_t const *patterns)
 {
 
-   uint16_t const *p = patterns;
+   int16_t const  *p = patterns;
    uint64_t       *s = src;
 
    s[0] = packA (p[ 0], p[ 1], p[ 2], p[ 3], p[ 4], p[ 5]);
@@ -1181,10 +1181,10 @@ static void fill16 (uint64_t *src, uint16_t const *patterns)
 
 
 /* ---------------------------------------------------------------------- */
-static void fill64 (uint64_t *src, uint16_t const *patterns)
+static void fill64 (uint64_t *src, int16_t const *patterns)
 {
 
-   uint16_t const *p = patterns;
+   int16_t  const *p = patterns;
    uint64_t       *s = src;
 
    for (int idx = 0; idx < 4; idx++)
@@ -1204,12 +1204,12 @@ static void fill64 (uint64_t *src, uint16_t const *patterns)
 
 
 /* ---------------------------------------------------------------------- */
-static inline uint64_t packA (uint16_t v0, 
-                              uint16_t v1,
-                              uint16_t v2,
-                              uint16_t v3,
-                              uint16_t v4,
-                              uint16_t v5)
+static inline uint64_t packA (int16_t v0, 
+                              int16_t v1,
+                              int16_t v2,
+                              int16_t v3,
+                              int16_t v4,
+                              int16_t v5)
 
 {
 /*
@@ -1256,14 +1256,14 @@ static inline uint64_t packA (uint16_t v0,
 
 
 /* ---------------------------------------------------------------------- */
-static inline uint64_t packB (uint16_t v4, 
-                              uint16_t v5,
-                              uint16_t v6,
-                              uint16_t v7,
-                              uint16_t v8,
-                              uint16_t v9,
-                              uint16_t vA,
-                              uint16_t vB)
+static inline uint64_t packB (int16_t v4, 
+                              int16_t v5,
+                              int16_t v6,
+                              int16_t v7,
+                              int16_t v8,
+                              int16_t v9,
+                              int16_t vA,
+                              int16_t vB)
 {
 /*
          7        6        5        4        3        2        1        0
@@ -1312,12 +1312,12 @@ static inline uint64_t packB (uint16_t v4,
 
 
 /* ---------------------------------------------------------------------- */
-static inline uint64_t packC (uint16_t vA, 
-                              uint16_t vB,
-                              uint16_t vC,
-                              uint16_t vD,
-                              uint16_t vE,
-                              uint16_t vF)
+static inline uint64_t packC (int16_t vA, 
+                              int16_t vB,
+                              int16_t vC,
+                              int16_t vD,
+                              int16_t vE,
+                              int16_t vF)
 {
 
 /*
@@ -1391,16 +1391,16 @@ static void print (char            const *title,
 
 
 /* ---------------------------------------------------------------------- */
-static int check_expansion (uint16_t const  *results, 
-                            uint16_t const *patterns,
-                            int            npatterns)
+static int check_expansion (int16_t const  *results, 
+                            int16_t const *patterns,
+                            int           npatterns)
 {
    int errcnt = 0;
 
    for (int idx = 0; idx < npatterns; ++idx)
    {
-      uint16_t  result =  results[idx];
-      uint16_t pattern = patterns[idx];
+      int16_t  result =  results[idx];
+      int16_t pattern = patterns[idx];
       if (result != pattern)
       {
          if (errcnt == 0)
@@ -1426,15 +1426,15 @@ static int check_expansion (uint16_t const  *results,
 
 
 /* ---------------------------------------------------------------------- */
-static int check_transpose  (uint16_t const  *results,
-                             uint16_t const  *patterns,
-                             int             nchannels,
-                             int               nframes)
+static int check_transpose  (int16_t const   *results,
+                             int16_t const  *patterns,
+                             int            nchannels,
+                             int              nframes)
 {
    /*
    printf ("Nchannels = %x Nframes = %x\n", nchannels, nframes);
    int stride = nframes;
-   uint16_t const *dst = results;
+   int16_t const *dst = results;
    printf ("Stride = %d\n", stride);
    for (int idx = 0; idx < 8; idx += 1)
    {
@@ -1463,8 +1463,8 @@ static int check_transpose  (uint16_t const  *results,
    {
       for (int iframe = 0; iframe < nframes;  iframe++)
       {
-         uint16_t  result = *results++;
-         uint16_t pattern = *(patterns + iframe * nchannels + ichan);
+         int16_t  result = *results++;
+         int16_t pattern = *(patterns + iframe * nchannels + ichan);
 
          if (result != pattern)
          {
@@ -1491,17 +1491,17 @@ static int check_transpose  (uint16_t const  *results,
 
 
 /* ---------------------------------------------------------------------- */
-static int check_transpose  (uint16_t *const  *results,
-                             uint16_t  const  *patterns,
-                             int              nchannels,
-                             int                nframes)
+static int check_transpose  (int16_t *const   *results,
+                             int16_t  const  *patterns,
+                             int             nchannels,
+                             int               nframes)
 {
    /*
    printf ("Channel-by-Channel checker nchannels.nframes = %d.%d\n", 
             nchannels, nframes);
 
    int stride = nframes;
-   uint16_t const *dst = results;
+   int16_t const *dst = results;
    printf ("Stride = %d\n", stride);
    for (int idx = 0; idx < 8; idx += 1)
    {
@@ -1528,11 +1528,11 @@ static int check_transpose  (uint16_t *const  *results,
    int errcnt = 0;
    for (int ichan = 0; ichan < nchannels; ++ichan)
    {
-      uint16_t const *r = results[ichan];
+      int16_t const *r = results[ichan];
       for (int iframe = 0; iframe < nframes;  iframe++)
       {
-         uint16_t  result = *r++;
-         uint16_t pattern = *(patterns + iframe * nchannels + ichan);
+         int16_t  result = *r++;
+         int16_t pattern = *(patterns + iframe * nchannels + ichan);
 
          if (result != pattern)
          {
@@ -1589,7 +1589,7 @@ static inline uint64_t _bextr_u64(uint64_t src, uint8_t beg, uint8_t len)
 
 
 /* ---------------------------------------------------------------------- */
-static void expandAdcs16x1_cpuA_kernel (uint16_t *dst, uint64_t const *src)
+static void expandAdcs16x1_cpuA_kernel (int16_t *dst, uint64_t const *src)
 {
    uint64_t w0;
    uint64_t w1;
@@ -1625,7 +1625,7 @@ static void expandAdcs16x1_cpuA_kernel (uint16_t *dst, uint64_t const *src)
 
 
 
-static inline void expandAdcs64x1_cpuA_kernel (uint16_t *dst, uint64_t const *src) 
+static inline void expandAdcs64x1_cpuA_kernel (int16_t *dst, uint64_t const *src) 
 {
    expandAdcs16x1_cpuA_kernel (dst + 0*16, &src[0]);
    expandAdcs16x1_cpuA_kernel (dst + 1*16, &src[3]);

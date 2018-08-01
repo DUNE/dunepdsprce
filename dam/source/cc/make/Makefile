@@ -164,12 +164,14 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
                                TpcRanges.cc           \
                                TpcToc.cc              \
                                TpcPacket.cc           \
+                               TpcCompressed.cc       \
+                               AP-Decode.cc           \
                                WibFrame.cc
 
 libprotodune-dam__CCFLAGS   := -g
 libprotodune-dam__CXXFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
-libprotodune-dam_VERSION    := 0.0.4
+libprotodune-dam_VERSION    := 1.0.0
 SHAREABLES                  += libprotodune-dam
 
 # ----------------------------------------------------------

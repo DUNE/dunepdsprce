@@ -65,33 +65,33 @@ static inline void expandAdcs16_init_kernel () __attribute__ ((always_inline));
 // ------------------------------
 // EXPANDERS:   Contigious Memory
 // ------------------------------
-static inline void expandAdcs16x1_kernel  (uint16_t       *dst,
+static inline void expandAdcs16x1_kernel  (int16_t        *dst,
                                            uint64_t const *src) __attribute__ ((always_inline));
 
-static inline void expandAdcs64x1_kernel  (uint16_t       *dst, 
+static inline void expandAdcs64x1_kernel  (int16_t        *dst, 
                                            uint64_t const *src) __attribute__ ((always_inline));
 
-static inline void expandAdcs16x4_kernel  (uint16_t       *dst, 
+static inline void expandAdcs16x4_kernel  (int16_t        *dst, 
                                            uint64_t const *src) __attribute__ ((always_inline));
 
 
 // ------------------------------
 // TRANSPOSERS: Contigious Memory
 // ------------------------------
-static inline void transposeAdcs16x8_kernel  (uint16_t       *dst, 
+static inline void transposeAdcs16x8_kernel  (int16_t        *dst, 
                                               int          offset, 
                                               uint64_t const *src) __attribute__ ((always_inline));
 
-static inline void transposeAdcs16x8N_kernel (uint16_t       *dst, 
+static inline void transposeAdcs16x8N_kernel (int16_t        *dst, 
                                               int              n8,
                                               int          stride, 
                                               uint64_t const *src) __attribute__ ((always_inline));
 
-static inline void transposeAdcs16x16_kernel (uint16_t       *dst, 
+static inline void transposeAdcs16x16_kernel (int16_t        *dst, 
                                               int          offset, 
                                               uint64_t const *src) __attribute__ ((always_inline));
 
-static inline void transposeAdcs16x32_kernel (uint16_t       *dst, 
+static inline void transposeAdcs16x32_kernel (int16_t        *dst, 
                                               int          offset, 
                                               uint64_t const *src) __attribute__ ((always_inline));
 
@@ -100,20 +100,20 @@ static inline void transposeAdcs16x32_kernel (uint16_t       *dst,
 // --------------------------------------
 // TRANSPOSERS: Channel-by-Channel Memory
 // --------------------------------------
-static inline void transposeAdcs16x8_kernel  (uint16_t *const *dst, 
+static inline void transposeAdcs16x8_kernel  (int16_t  *const *dst, 
                                               int           offset, 
                                               uint64_t const  *src) __attribute__ ((always_inline));
 
-static inline void transposeAdcs16x8N_kernel (uint16_t *const *dst, 
+static inline void transposeAdcs16x8N_kernel (int16_t  *const *dst, 
                                               int               n8,
                                               int           offset, 
                                               uint64_t const  *src) __attribute__ ((always_inline));
 
-static inline void transposeAdcs16x16_kernel (uint16_t *const *dst, 
+static inline void transposeAdcs16x16_kernel (int16_t  *const *dst, 
                                               int           offset, 
                                               uint64_t  const *src) __attribute__ ((always_inline));
 
-static inline void transposeAdcs16x32_kernel (uint16_t *const *dst, 
+static inline void transposeAdcs16x32_kernel (int16_t  *const *dst, 
                                               int           offset, 
                                               uint64_t  const *src) __attribute__ ((always_inline));
      
@@ -128,7 +128,7 @@ static inline void transposeAdcs16x32_kernel (uint16_t *const *dst,
                    adcs.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void  WibFrame::expandAdcs128x1 (uint16_t *dst) const
+void  WibFrame::expandAdcs128x1 (int16_t *dst) const
 {
    WibColdData const (& coldData)[2] = getColdData ();
    coldData[0].expandAdcs64x1 (dst + 0*pdd::record::WibColdData::NAdcs);
@@ -146,7 +146,7 @@ void  WibFrame::expandAdcs128x1 (uint16_t *dst) const
                    adcs.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void  WibFrame::expandAdcs128xN (uint16_t          *dst, 
+void  WibFrame::expandAdcs128xN (int16_t           *dst, 
                                  WibFrame const *frames, 
                                  int            nframes)
 {
@@ -174,7 +174,7 @@ void  WibFrame::expandAdcs128xN (uint16_t          *dst,
                               to transpose.  This must a multiple of 16.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibFrame::transposeAdcs128xN  (uint16_t             *dst,
+void WibFrame::transposeAdcs128xN  (int16_t              *dst,
                                     int            ndstStride,
                                     WibFrame  const   *frames,
                                     int               nframes)
@@ -218,7 +218,7 @@ void WibFrame::transposeAdcs128xN  (uint16_t             *dst,
    ADC values.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibFrame::transposeAdcs128x8N (uint16_t             *dst,
+void WibFrame::transposeAdcs128x8N (int16_t              *dst,
                                     int            ndstStride,
                                     WibFrame const    *frames,
                                     int               nframes)
@@ -241,9 +241,9 @@ void WibFrame::transposeAdcs128x8N (uint16_t             *dst,
    // ----------------------------------------------------------------
    // Locate where in the output data for the 2 cold data streams goes
    // ----------------------------------------------------------------
-   uint16_t *dst0 = dst;
-   uint16_t *dst1 = dst + 64 * ndstStride;
-   int n8frames   = nframes/8;
+   int16_t *dst0 = dst;
+   int16_t *dst1 = dst + 64 * ndstStride;
+   int n8frames  = nframes/8;
 
 
    // ---------------------------------
@@ -259,8 +259,8 @@ void WibFrame::transposeAdcs128x8N (uint16_t             *dst,
       uint64_t const *lclsrc0 = src0;
       uint64_t const *lclsrc1 = src1;
 
-      uint16_t       *lcldst0 = dst0;
-      uint16_t       *lcldst1 = dst1;
+      int16_t        *lcldst0 = dst0;
+      int16_t        *lcldst1 = dst1;
 
 
       // ----------------------------------
@@ -313,7 +313,7 @@ void WibFrame::transposeAdcs128x8N (uint16_t             *dst,
    ADC values.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibFrame::transposeAdcs128x16N (uint16_t             *dst,
+void WibFrame::transposeAdcs128x16N (int16_t              *dst,
                                      int            ndstStride,
                                      WibFrame const    *frames,
                                      int               nframes)
@@ -336,8 +336,8 @@ void WibFrame::transposeAdcs128x16N (uint16_t             *dst,
    // ----------------------------------------------------------------
    // Locate where in the output data for the 2 cold data streams goes
    // ----------------------------------------------------------------
-   uint16_t *dst0 = dst;
-   uint16_t *dst1 = dst + 64 * ndstStride;
+   int16_t *dst0 = dst;
+   int16_t *dst1 = dst + 64 * ndstStride;
 
 
    int n16frames = nframes/16;
@@ -356,8 +356,8 @@ void WibFrame::transposeAdcs128x16N (uint16_t             *dst,
       uint64_t const *lclsrc0 = src0;
       uint64_t const *lclsrc1 = src1;
 
-      uint16_t       *lcldst0 = dst0;
-      uint16_t       *lcldst1 = dst1;
+      int16_t        *lcldst0 = dst0;
+      int16_t        *lcldst1 = dst1;
 
 
       // ----------------------------------
@@ -408,7 +408,7 @@ void WibFrame::transposeAdcs128x16N (uint16_t             *dst,
    ADC values.
                                                                           */
 /* ---------------------------------------------------------------------- */    
-void WibFrame::transposeAdcs128x32N (uint16_t             *dst,
+void WibFrame::transposeAdcs128x32N (int16_t              *dst,
                                      int            ndstStride,
                                      WibFrame const    *frames,
                                      int               nframes)
@@ -429,8 +429,8 @@ void WibFrame::transposeAdcs128x32N (uint16_t             *dst,
    // ----------------------------------------------------------------
    // Locate where in the output data for the 2 cold data streams goes
    // ----------------------------------------------------------------
-   uint16_t *dst0 = dst;
-   uint16_t *dst1 = dst + 64 * ndstStride;
+   int16_t *dst0 = dst;
+   int16_t *dst1 = dst + 64 * ndstStride;
 
 
    int n32frames = nframes/32;
@@ -449,8 +449,8 @@ void WibFrame::transposeAdcs128x32N (uint16_t             *dst,
       uint64_t const *lclsrc0 = src0;
       uint64_t const *lclsrc1 = src1;
 
-      uint16_t       *lcldst0 = dst0;
-      uint16_t       *lcldst1 = dst1;
+      int16_t        *lcldst0 = dst0;
+      int16_t        *lcldst1 = dst1;
 
       // ----------------------------------
       // Loop over the adcs in groups of 16
@@ -500,7 +500,7 @@ void WibFrame::transposeAdcs128x32N (uint16_t             *dst,
                               to transpose.  This must a multiple of 16.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibFrame::transposeAdcs128xN  (uint16_t *const  dst[128],
+void WibFrame::transposeAdcs128xN  (int16_t  *const  dst[128],
                                     int                offset,
                                     WibFrame  const   *frames,
                                     int               nframes)
@@ -541,7 +541,7 @@ void WibFrame::transposeAdcs128xN  (uint16_t *const  dst[128],
                               to transpose.  This must a multiple of 16.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibFrame::transposeAdcs128x8N  (uint16_t *const  dst[128],
+void WibFrame::transposeAdcs128x8N  (int16_t  *const  dst[128],
                                      int                offset,
                                      WibFrame  const   *frames,
                                      int               nframes)
@@ -562,9 +562,9 @@ void WibFrame::transposeAdcs128x8N  (uint16_t *const  dst[128],
    // ----------------------------------------------------------------
    // Locate where in the output data for the 2 cold data streams goes
    // ----------------------------------------------------------------
-   uint16_t *const *dst0 = dst;
-   uint16_t *const *dst1 = dst + 64;
-   int    n8frames = nframes/8;
+   int16_t *const *dst0 = dst;
+   int16_t *const *dst1 = dst + 64;
+   int         n8frames = nframes/8;
 
    // ---------------------------------
    // Initialize the expander registers
@@ -580,8 +580,8 @@ void WibFrame::transposeAdcs128x8N  (uint16_t *const  dst[128],
       uint64_t const *lclsrc0 = src0;
       uint64_t const *lclsrc1 = src1;
 
-      uint16_t *const *lcldst0 = dst0;
-      uint16_t *const *lcldst1 = dst1;
+      int16_t *const *lcldst0 = dst0;
+      int16_t *const *lcldst1 = dst1;
 
 
       // ----------------------------------
@@ -630,7 +630,7 @@ void WibFrame::transposeAdcs128x8N  (uint16_t *const  dst[128],
                               to transpose.  This must a multiple of 16.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibFrame::transposeAdcs128x16N (uint16_t *const  dst[128],
+void WibFrame::transposeAdcs128x16N (int16_t *const   dst[128],
                                      int                offset,
                                      WibFrame const    *frames,
                                      int               nframes)
@@ -651,8 +651,8 @@ void WibFrame::transposeAdcs128x16N (uint16_t *const  dst[128],
    // ----------------------------------------------------------------
    // Locate where in the output data for the 2 cold data streams goes
    // ----------------------------------------------------------------
-   uint16_t *const *dst0 = dst;
-   uint16_t *const *dst1 = dst + 64;
+   int16_t *const *dst0 = dst;
+   int16_t *const *dst1 = dst + 64;
 
 
    // ---------------------------------
@@ -670,8 +670,8 @@ void WibFrame::transposeAdcs128x16N (uint16_t *const  dst[128],
       uint64_t const *lclsrc0 = src0;
       uint64_t const *lclsrc1 = src1;
 
-      uint16_t *const *lcldst0 = dst0;
-      uint16_t *const *lcldst1 = dst1;
+      int16_t *const *lcldst0 = dst0;
+      int16_t *const *lcldst1 = dst1;
 
       // ----------------------------------
       // Loop over the adcs in groups of 16
@@ -721,7 +721,7 @@ void WibFrame::transposeAdcs128x16N (uint16_t *const  dst[128],
    ADC values.
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
+void WibFrame::transposeAdcs128x32N (int16_t  *const  dst[128],
                                      int                offset,
                                      WibFrame  const   *frames,
                                      int               nframes)
@@ -742,8 +742,8 @@ void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
    // ----------------------------------------------------------------
    // Locate where in the output data for the 2 cold data streams goes
    // ----------------------------------------------------------------
-   uint16_t *const *dst0 = dst;
-   uint16_t *const *dst1 = dst + 64;
+   int16_t *const *dst0 = dst;
+   int16_t *const *dst1 = dst + 64;
 
 
    // ---------------------------------
@@ -760,8 +760,8 @@ void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
       uint64_t  const *lclsrc0 = src0;
       uint64_t  const *lclsrc1 = src1;
 
-      uint16_t *const *lcldst0 = dst0;
-      uint16_t *const *lcldst1 = dst1;
+      int16_t  *const *lcldst0 = dst0;
+      int16_t  *const *lcldst1 = dst1;
 
       // ----------------------------------
       // Loop over the adcs in groups of 16
@@ -813,7 +813,7 @@ void WibFrame::transposeAdcs128x32N (uint16_t *const  dst[128],
   \param[in] src  The source address
                                                                           */
 /* ---------------------------------------------------------------------- */
-void WibColdData::expandAdcs64x1 (uint16_t             *dst,
+void WibColdData::expandAdcs64x1 (int16_t              *dst,
                                   uint64_t const (&src)[12])
 {
    expandAdcs16_init_kernel ();
@@ -837,7 +837,7 @@ void WibColdData::expandAdcs64x1 (uint16_t             *dst,
   \param[in]    src The source array
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8N_kernel (uint16_t       *dst, 
+static inline void transposeAdcs16x8N_kernel (int16_t        *dst, 
                                               int              n8,
                                               int          stride,
                                               uint64_t const *src)
@@ -855,7 +855,7 @@ static inline void transposeAdcs16x8N_kernel (uint16_t       *dst,
 
 
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x16_kernel (uint16_t       *dst, 
+static inline void transposeAdcs16x16_kernel (int16_t        *dst, 
                                               int          stride, 
                                               uint64_t const *src)
 {
@@ -866,7 +866,7 @@ static inline void transposeAdcs16x16_kernel (uint16_t       *dst,
 
 
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x32_kernel (uint16_t       *dst, 
+static inline void transposeAdcs16x32_kernel (int16_t        *dst, 
                                               int          stride, 
                                               uint64_t const *src)
 {
@@ -894,7 +894,7 @@ static inline void transposeAdcs16x32_kernel (uint16_t       *dst,
   \param[in]    src The source array
                                                                           */
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x8N_kernel (uint16_t *const *dst, 
+static inline void transposeAdcs16x8N_kernel (int16_t  *const *dst, 
                                               int               n8,
                                               int           offset,
                                               uint64_t const  *src)
@@ -913,7 +913,7 @@ static inline void transposeAdcs16x8N_kernel (uint16_t *const *dst,
 
 
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x16_kernel (uint16_t *const *dst, 
+static inline void transposeAdcs16x16_kernel (int16_t *const  *dst, 
                                               int           offset,
                                               uint64_t const  *src)
 {
@@ -924,7 +924,7 @@ static inline void transposeAdcs16x16_kernel (uint16_t *const *dst,
 
 
 /* ---------------------------------------------------------------------- */
-static inline void transposeAdcs16x32_kernel (uint16_t *const *dst, 
+static inline void transposeAdcs16x32_kernel (int16_t *const  *dst, 
                                               int           offset, 
                                               uint64_t const  *src)
 {

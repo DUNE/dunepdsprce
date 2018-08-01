@@ -741,7 +741,7 @@ $(PKG_BLD_INCS) $(PKG_BLD_INCTARGETS) : | $(PKG_BLD_INCDIR)
 #
 # <constituent>_CCOBJFILES: 
 # The object files for a constituent's C++ source files
-$
+#
 # <constituent>_CDPEFILES: 
 # The dependency files for a constituent's C source files
 #

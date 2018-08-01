@@ -158,6 +158,7 @@ public:
       Type             getType () const;
       unsigned int getOffset64 () const;
       bool          isWibFrame () const;
+      bool        isCompressed () const;
 
    private:
       uint32_t m_w32;

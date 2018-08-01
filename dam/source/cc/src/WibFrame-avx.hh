@@ -117,7 +117,7 @@ static inline void expandAdcs16_init ()
    by eapandAdcs_init to do the initial shuffle
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
+inline void expandAdcs16x1_kernel (int16_t *dst, uint64_t const *src)
 {
    uint8_t const *s8 =  reinterpret_cast<decltype (s8)>(src);
 
@@ -269,7 +269,7 @@ inline void expandAdcs16x1_kernel (uint16_t *dst, uint64_t const *src)
                                                                           */
 /* ---------------------------------------------------------------------- */
 inline void expandAdcs64x1_kernel (uint16_t       *dst, 
-                                       uint64_t const *src)
+                                   uint64_t const *src)
 {
    expandAdcs16x1_kernel (dst+0*16, src+0*3);
    expandAdcs16x1_kernel (dst+1*16, src+1*3);
@@ -296,7 +296,7 @@ inline void expandAdcs64x1_kernel (uint16_t       *dst,
    by expandAdcs_init to do the initial shuffle
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline void expandAdcs128x1_kernel (uint16_t       *dst, 
+inline void expandAdcs128x1_kernel (int16_t        *dst, 
                                     uint64_t const *src)
 {
 #if 1
@@ -330,17 +330,17 @@ inline void expandAdcs128x1_kernel (uint16_t       *dst,
    by expandhAdcs_init to do the initial shuffle
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline void expandAdcs16x4_kernel (uint16_t       *dst, 
+inline void expandAdcs16x4_kernel (int16_t        *dst, 
                                    uint64_t const *src)
 {
 #define STRIDE64 ((STRIDE)/sizeof (uint64_t))
 
    /*
    printf ("First %4.4x %4.4x %4.4x %4.4x\n",
-           ((uint16_t const *)s8)[0*STRIDE/2],
-           ((uint16_t const *)s8)[1*STRIDE/2],
-           ((uint16_t const *)s8)[2*STRIDE/2],
-           ((uint16_t const *)s8)[3*STRIDE/2]);
+           ((int16_t const *)s8)[0*STRIDE/2],
+           ((int16_t const *)s8)[1*STRIDE/2],
+           ((int16_t const *)s8)[2*STRIDE/2],
+           ((int16_t const *)s8)[3*STRIDE/2]);
    */
 #if 1
    expandAdcs16x1_kernel (dst+0*16, src+0*STRIDE64);
@@ -357,9 +357,9 @@ inline void expandAdcs16x4_kernel (uint16_t       *dst,
 
 
 /* ---------------------------------------------------------------------- */
-static inline void transpose16x8_kernel (uint16_t       *dst, 
+static inline void transpose16x8_kernel (int16_t        *dst, 
                                          int          stride, 
-                                         uint16_t const *src)
+                                         int16_t  const *src)
 {
 #if 1
    /*  ----------------------------------------------------------------- *\ 
@@ -666,9 +666,9 @@ static inline void transpose16x8_kernel (uint16_t       *dst,
 
 
 
-static inline void transpose16x8_kernel (uint16_t  *dst[128], 
-                                         int          offset, 
-                                         uint16_t const *src)
+static inline void transpose16x8_kernel (int16_t  *dst[128], 
+                                         int         offset, 
+                                         int16_t const *src)
 {
    /* ------------------------------------------------------------------- *\
     | For a discription of the algorithm, see the kernel for contigious   |
