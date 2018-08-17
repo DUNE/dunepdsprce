@@ -112,6 +112,8 @@ namespace access {
 static inline void announce (int ichan, int next, int position) 
                                         __attribute__((unused));
 
+static inline void hist_integrate (uint16_t *table, uint16_t *bins, int nbins)
+                                                     __attribute__ ((unused));
 
 /* ---------------------------------------------------------------------- *//*!
 
