@@ -29,6 +29,8 @@
  *
  * DATE     WHO WHAT
  * -------- --- ---------------------------------------------------------
+ * 08.18/18 jjr Eliminated use of register qualfier, deprecated under 
+ *              C++17
  * 08.18.18 jjr Changed name of macro load -> apd_load.  There was a 
  *              conflict with a compiler.
  * 01.18.05 jjr Separated basic code (here) from platform related stuff
@@ -156,7 +158,7 @@ int  apd_bdecompress (uint8_t             *out,
 extern unsigned int apd_decode (APD_dtx             *dtx,
                                 APD_table_t const *table)
 {
-    register uint32_t cum;
+    uint32_t          cum;
     int            symbol;
     int             range;
 
