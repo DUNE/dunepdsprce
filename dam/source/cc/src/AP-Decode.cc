@@ -53,6 +53,7 @@
  *
  * DATE       WHO WHAT
  * ---------- --- ---------------------------------------------------------
+ * 2018.08.17 jjr Added unused attribute to the lookup routines
  * 2016.05.19 jjr Adapted for dune usage
  *
 \* ---------------------------------------------------------------------- */
@@ -68,7 +69,20 @@
 #define APD_K_IOBUF_BITS      (1<<APD_K_IOBUF_SHIFT)
 #define APD_M_IOBUF_MASK     ((1<<APD_K_IOBUF_SHIFT) - 1)
 
+static __inline int lookup     (APD_cv_t             cum,
+                                APD_table_t const *table,
+                                unsigned int         cnt) 
+                                  __attribute__((unused));
 
+static __inline int lookup_top (APD_cv_t             cum,
+                                APD_table_t const *table,
+                                unsigned int         cnt)
+                                  __attribute__((unused));
+
+static __inline int lookup_bot (APD_cv_t             cum,
+                                APD_table_t const *table,
+                                unsigned int         cnt)
+                                  __attribute__((unused));
 
 
 /* ---------------------------------------------------------------------- *//*!
@@ -455,7 +469,7 @@ static __inline int lookup_bot (APD_cv_t             cum,
 /* Set the stream access */
 
 #if APD_K_IOBUF_SHIFT==6
-#    define  load(_in)       *(uint64_t *)(_in)
+#    define  apd_load(_in)       *(uint64_t *)(_in)
 #else
 #    error APD_K_IOBUF is not 6 (64-bit access)
 #endif

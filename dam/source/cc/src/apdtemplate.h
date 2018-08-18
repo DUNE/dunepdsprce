@@ -29,6 +29,8 @@
  *
  * DATE     WHO WHAT
  * -------- --- ---------------------------------------------------------
+ * 08.18.18 jjr Changed name of macro load -> apd_load.  There was a 
+ *              conflict with a compiler.
  * 01.18.05 jjr Separated basic code (here) from platform related stuff
  * 09.21.05 jjr Eliminated used macro store
  *
@@ -54,7 +56,7 @@ do                                                                        \
 {   _bits_to_go -= 1;                                                     \
     if (_bits_to_go < 0)                                                  \
     {                                                                     \
-        _buffer =  load (_in);                                            \
+        _buffer =  apd_load (_in);                                        \
         _in     = _in + sizeof (APD_iobuf_t);                             \
                                                                           \
         /* printf ("Buffer = %8.8x\n", _buffer); */                       \
@@ -99,7 +101,7 @@ extern void apd_start (APD_dtx      *dtx,
 
     /* Pick up the shard, this can be from 1 to 8 bits */
     dtx->beg   =  in;
-    buffer     =  load (in);
+    buffer     =  apd_load (in);
     in         =  in + sizeof (APD_iobuf_t);
     bits_to_go =  APD_K_IOBUF_BITS - boff;
     dtx->bbeg  =  boff;
