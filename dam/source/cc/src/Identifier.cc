@@ -38,6 +38,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.08.14 jjr Correct extraction of crate.slot.fiber in print
    2017.10.12 jjr Separated from Headers.hh
   
 \* ---------------------------------------------------------------------- */
@@ -133,18 +134,20 @@ void Identifier::print (Identifier const *identifier)
    unsigned sequence  = getSequence (id);
 
    
-   unsigned c0 = (src0 >> 6) & 0x1f;
-   unsigned s0 = (src0 >> 3) & 0x7;
+
+   unsigned s0 = (src0 >> 8) & 0x7;
+   unsigned c0 = (src0 >> 3) & 0x1f;
    unsigned f0 = (src0 >> 0) & 0x7;
    
-   unsigned c1 = (src1 >> 6) & 0x1f;
-   unsigned s1 = (src1 >> 3) & 0x7;
+
+   unsigned s1 = (src1 >> 8) & 0x7;
+   unsigned c1 = (src1 >> 3) & 0x1f;
    unsigned f1 = (src1 >> 0) & 0x7;
 
    
    printf (
-      "            Format.Type = %1.1x.%1.1x Srcs = %1x.%1x.%1x : %1x.%1x.%1x\n"
-      "            Timestamp   = %16.16" PRIx64 " Sequence = %8.8" PRIx32 "\n",
+      "            Format.Type = 0x%1.1x.%1.1x Srcs = 0x%1x.%1x.%1x : 0x%1x.%1x.%1x\n"
+      "            Timestamp   = 0x%16.16" PRIx64 " Sequence = 0x%8.8" PRIx32 "\n",
       format, type, c0, s0, f0, c1, s1, f1,
       timestamp, sequence);
 

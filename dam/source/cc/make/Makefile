@@ -139,6 +139,14 @@ ifeq ($(TARGET_CPU),x86_64)
   EXECUTABLES               += PdWibFrameTest
 
 
+  PdWibFrameExtract_SRCDIR     := $(PKG_CC_ROOT)/ptd
+  PdWibFrameExtract_CCSRCFILES := PdWibFrameExtract.cc
+  PdWibFrameExtract__CPPFLAGS  := -g
+  PdWibFrameExtract_LDFLAGS    := $(dam-lib)
+  PdWibFrameExtract_ALIAS      := PdWibFrameExtract
+  EXECUTABLES                  += PdWibFrameExtract
+
+
 #  capabilities_SRCDIR      := $(PKG_CC_ROOT)/src
 #  capabilities_CSRCFILES   := capabilities.c
 #  capabilities_ALIAS       := capabilities

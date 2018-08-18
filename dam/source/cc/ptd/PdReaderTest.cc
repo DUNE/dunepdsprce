@@ -204,8 +204,11 @@ static void processFragment (uint64_t const *buf)
       // ---------------------------------------------
       if (df.isTpcNormal () || df.isTpcDamaged ())
       {
-
-         printf ("Have TpcStream data type\n");
+         char const *tpcType = df.isTpcNormal  () ? "TpcNormal"
+                             : df.isTpcDamaged () ? "TpcDamaged"
+                             : "TpcUnknown";
+         
+         printf ("Have TpcStream data type: %s\n", tpcType);
 
          // ------------------------------------------------
          // Having verified that this is a TPC data fragment
@@ -287,7 +290,7 @@ static void process (TpcStreamUnpack const *tpcStream)
    TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
    int                  nchannels = tpcStream->getNChannels  ();
    uint32_t                status = tpcStream->getStatus     ();
-   printf ("TpcStream: %1d.%1d.%1d  # channels = %4d status = %8.8" PRIx32 "\n",
+   printf ("TpcStream: 0x%2x.%1x.%1x  # channels = %4d status = %8.8" PRIx32 "\n",
            id.getCrate (),
            id.getSlot  (),
            id.getFiber (),
@@ -468,8 +471,7 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
 
          if (errCnt)
          {
-            printf ("Error\n");
-            exit (-1);
+            printf ("Error %u\n", errCnt);
          }
       }
       else if (pktDsc.isCompressed ())
