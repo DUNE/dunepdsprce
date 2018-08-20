@@ -29,7 +29,14 @@
  *
  * DATE     WHO WHAT
  * -------- --- ---------------------------------------------------------
- * 08.18/18 jjr Eliminated use of register qualfier, deprecated under 
+ * 08.20.18 jjr Remove attempt to realign the input buffer to 64-bits.
+ *              This cannot be done.  The data is stored as a big-endian
+ *              bit stream place in uint64_t's.  If it was little-endian
+ *              this realignment would work, but not for big-endian
+ *              streams.  It is most natural to store the data stream
+ *              a big-endian since the first bit out is the most 
+ *              significant bit.
+ * 08.18.18 jjr Eliminated use of register qualfier, deprecated under 
  *              C++17
  * 08.18.18 jjr Changed name of macro load -> apd_load.  There was a 
  *              conflict with a compiler.
@@ -94,9 +101,6 @@ extern void apd_start (APD_dtx      *dtx,
 
     /* Move to the nearest buffer boundary */
     in        = (uint8_t const *)src;
-    boff     += (uintptr_t)in & APD_M_IOBUF_ALIGN;
-    in        = (uint8_t *)((uintptr_t)in
-                         & ~(uintptr_t)APD_M_IOBUF_ALIGN);
     in       += (boff >> APD_K_IOBUF_SHIFT) << 3;  // Force alignment to buffer width, convert to byte offset
     boff     &= APD_M_IOBUF_MASK;
 

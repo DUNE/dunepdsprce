@@ -126,7 +126,15 @@ int main (int argc, char *const argv[])
       exit (-1);
    }
 
+#  if 1
    uint64_t *buf = reinterpret_cast<decltype (buf)>(malloc (MaxBuf));
+#else
+   // Force misaligned 
+   uint8_t  *bufptr = reinterpret_cast<decltype (bufptr)>(malloc (MaxBuf));
+   uint64_t  bufint = reinterpret_cast<decltype (bufint)>(bufptr);
+   bufint |= 7;
+   uint64_t *buf    = reinterpret_cast<decltype(buf)>(bufint);
+#endif
 
    while (1)
    {
