@@ -179,7 +179,7 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
 libprotodune-dam__CCFLAGS   := -g
 libprotodune-dam__CXXFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
-libprotodune-dam_VERSION    := 1.0.2
+libprotodune-dam_VERSION    := 1.0.3
 SHAREABLES                  += libprotodune-dam
 
 # ----------------------------------------------------------
