@@ -44,6 +44,9 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.09.13 jjr Added
+                    isTpcNorml    ()
+                    isTpcDamaged ()
    2018.07.13 jjr Used the reserved byte in the bridge word for the stream's
                   status value.
    2017.10.07 jjr Created.  This is for methods that, for performance 
@@ -53,8 +56,12 @@
 \* ---------------------------------------------------------------------- */
 
 
-
 #include "dam/access/TpcStream.hh"
+#include "TpcRanges-Impl.hh"
+#include "TpcToc-Impl.hh"
+#include "TpcPacket-Impl.hh"
+
+
 /*
 #include "dam/access/TpcRanges.hh"
 #include "dam/access/TpcToc.hh"
@@ -88,7 +95,7 @@ namespace record {
 /* ---------------------------------------------------------------------- */
 namespace tpcstream_bridge
 {
-   /* -------------------------------------------------------------------- *//*!
+   /* ------------------------------------------------------------------- *//*!
 
      \brief Size of the bit fields of the bridge word
                                                                           */
@@ -260,7 +267,51 @@ TPCSTREAM_IMPL uint32_t TpcStream::getStatus () const
    return getHeader ()->getStatus (); 
 }
 /* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+   \brief  Checks if the record type is TpcNormal
+   \retval == true,  if the record type is TpcNormal
+   \retval == false, if the record type is not TpcNormal
+
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCSTREAM_IMPL bool TpcStream::isTpcNormal () const
+{
+   auto tpcStreamHeader = getHeader ();
+   bool       tpcNormal = tpcStreamHeader->isTpcNormal ();
+   return     tpcNormal; 
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+   \brief  Checks if the record type is TpcDamaged
+   \retval == true,  if the record type is TpcDamaged
+   \retval == false, if the record type is not TpcDamaged
+
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TPCSTREAM_IMPL bool TpcStream::isTpcDamaged () const
+{
+   auto tpcStreamHeader = getHeader ();
+   bool      tpcDamaged = tpcStreamHeader->isTpcDamaged ();
+   return    tpcDamaged; 
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+   
+/* ---------------------------------------------------------------------- */
 }}
+
+
+
 
 namespace pdd    {
 namespace access {
@@ -270,9 +321,7 @@ class TpcStreamHeader : public pdd::record::TpcStreamHeader
    TpcStreamHeader () = delete;
 
 };
-   
-
-
+/* ---------------------------------------------------------------------- */
 } /* END: namespace access                                                */
 /* ---------------------------------------------------------------------- */
 } /* END: namespace pdd                                                   */

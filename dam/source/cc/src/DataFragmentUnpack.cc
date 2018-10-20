@@ -26,6 +26,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.08.30 jjr Added isTpcEmpty   method
    2018.03.23 jjr Added isTpcDamaged method
    2017.10.27 jjr Corrected getHeader (buf) routine. The way it was written
                   it called itself. 
@@ -94,9 +95,6 @@ bool DataFragmentUnpack::isTpcNormal () const
 
 
 
-
-
-
 /* ---------------------------------------------------------------------- *//*!
 
   \brief  Test if this DataFragment is a damaged, \i.e. a TPC fragment 
@@ -110,6 +108,24 @@ bool DataFragmentUnpack::isTpcDamaged () const
 {
    bool   isTpcDamaged = m_df.isTpcDamaged ();
    return isTpcDamaged;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Test if this DataFragment is a empty \i.e. there are no TPC
+          streams in this fragment
+
+  \retval true,   if this DataFragment is an empty TPC fragment
+  \retval false,  if this DataFragment is not an empty TPC fragment
+                                                                          */
+/* ---------------------------------------------------------------------- */
+bool DataFragmentUnpack::isTpcEmpty () const
+{
+   bool   isTpcEmpty = m_df.isTpcEmpty ();
+   return isTpcEmpty;
 }
 /* ---------------------------------------------------------------------- */
 

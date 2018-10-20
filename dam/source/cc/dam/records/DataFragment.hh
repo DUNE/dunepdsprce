@@ -29,6 +29,10 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.08.30 jjr Added TpcEmpty to record types
+                  Corrected isTpc; had cut and paste error that used
+                  TpcNormal twice in forming the bit mask of TPC record
+                  types.
    2017.08.29 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -57,7 +61,8 @@ public:
       Reserved_0   = 0,  /*!< Reserved for future use                     */
       Originator   = 1,  /*!< Originator record type                      */
       TpcNormal    = 2,  /*!< Normal  TPC data, \e i.e. no errors         */
-      TpcDamaged   = 3   /*!< Damaged TPC data, \e i.e. has errors        */
+      TpcDamaged   = 3,  /*!< Damaged TPC data, \e i.e. has errors        */
+      TpcEmpty     = 4   /*!< No      TPC data,                           */
    };
 
    RecType getRecType () const;
@@ -67,10 +72,12 @@ public:
    bool       isTpc         () const  { return isTpc        (getRecType ()); }
    bool       isTpcNormal   () const  { return isTpcNormal  (getRecType ()); }
    bool       isTpcDamaged  () const  { return isTpcDamaged (getRecType ()); }
+   bool       isTpcEmpty    () const  { return isTpcEmpty   (getRecType ()); }
 
 
    static bool isTpcNormal  (RecType recType);
    static bool isTpcDamaged (RecType recType);
+   static bool isTpcEmpty   (RecType recType);
    static bool isTpc        (RecType recType);
 
 public:
@@ -112,6 +119,12 @@ inline bool          DataFragmentHeader::
 {
    return (recType == DataFragmentHeader::RecType::TpcDamaged);
 }
+
+inline bool          DataFragmentHeader::
+       isTpcEmpty   (DataFragmentHeader::RecType recType)
+{
+   return (recType == DataFragmentHeader::RecType::TpcEmpty);
+}
 /* ---------------------------------------------------------------------- */
 
 
@@ -120,8 +133,9 @@ inline bool   DataFragmentHeader::
        isTpc (DataFragmentHeader::RecType recType)
 {
    static const uint32_t TpcTypes = 
-      (1 << (static_cast<int>(DataFragmentHeader::RecType::TpcNormal))) |
-      (1 << (static_cast<int>(DataFragmentHeader::RecType::TpcNormal)));
+      (1 << (static_cast<int>(DataFragmentHeader::RecType::TpcNormal ))) |
+      (1 << (static_cast<int>(DataFragmentHeader::RecType::TpcDamaged))) |
+      (1 << (static_cast<int>(DataFragmentHeader::RecType::TpcEmpty  )));
 
    int rtm = 1 << static_cast<uint32_t>(recType);
 

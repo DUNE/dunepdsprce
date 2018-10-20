@@ -26,6 +26,28 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.20 jjr Replaced getTimestamps(Untrimmed) with getRange(Untrimmed)
+                  This method adds the number of ticks in the trimmed/
+                  untrimmed ranges in addition to their timestamps
+
+   2018.09.11 jjr Add 
+                   isTpcNormal  ()
+                   isTpcDamaged ()
+                   getDataFormatType ()
+
+                   Modified all getMultiChannel methods to return false
+                   if the stream is not tpcNormal.  This is a stop gap
+                   method until can do the filling in of missed channels
+                   properly.
+
+                   Modified getNTicks to return the number of ticks as
+                   calculated by the event window, not the indices. If
+                   packets are missing, the calculation using the indices
+                   will fail.
+
+   2018.08.30 jjr Added getTimestamps(Untrimmed) to get the begin, trigger
+                  and end timestamps of this TpcStream
+
    2018.07.26 jjr Changed ADC type to int16_t
 
    2018.07.23 jjr Added code for decompression
@@ -56,11 +78,19 @@
 #include "dam/access/TpcCompressed.hh"
 #include "dam/records/TpcCompressed.hh"
 #include "dam/access/WibFrame.hh"
+#include "TpcTrimmedRange.hh"
 #include "TpcStream-Impl.hh"
 #include "TpcRanges-Impl.hh"
 #include "TpcToc-Impl.hh"
 #include "TpcPacket-Impl.hh"
 #include "TpcCompressed-Impl.hh"
+
+
+static inline void getTrimmed (pdd::access::TpcStream const *tpc,
+                               int                          *beg,
+                               int                       *nticks);
+
+
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -102,33 +132,56 @@ size_t TpcStreamUnpack::getNTicksUntrimmed () const
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief  Get the number of trimmed time samples
+  \brief  Get the actual number of trimmed time samples
   \return The number of trimmed time samples of contributor \e ictb
+
+  \par
+  This is usually the same as getNTicksWindow, but will differ when the
+  stream is damaged.  Taking the difference getNTicksWindow - getNTicks
+  will generally be 0 or a positive number. If non-zero, the number will
+  be the number of frames that were dropped.
 
                                                                           */
 /* ---------------------------------------------------------------------- */
 size_t TpcStreamUnpack::getNTicks () const
+{
+   int    beg;
+   int nticks;
+   getTrimmed (&m_stream, &beg, &nticks);
+
+   return nticks;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Get the number of time samples in the event window
+  \return The number of time samples of contributor \e ictb in the 
+          event window
+
+ \par
+  This is usually the same as getNTicks, but will differ when the stream
+  is damaged.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+size_t TpcStreamUnpack::getNTicksWindow () const
 {
    using namespace pdd;
    using namespace pdd::access;
 
    pdd::access::TpcStream const &stream = getStream ();
    pdd::record::TpcRanges const *ranges = stream.getRanges ();
-   unsigned int                  bridge = TpcRanges::getBridge  (ranges);
-   pdd::access::TpcRangesIndices indices (TpcRanges::getIndices (ranges),
-                                                                 bridge);
+   unsigned int                  bridge = TpcRanges::getBridge (ranges);
+   pdd::access::TpcRangesWindow  window  (TpcRanges::getWindow (ranges),
+                                                                bridge);
 
-   uint32_t beg = indices.getBegin ();
-   uint32_t end = indices.getEnd   ();
+   uint32_t beg = window.getBegin ();
+   uint32_t end = window.getEnd   ();
 
-   int   begPkt = indices.getPacket (beg);
-   int   begOff = indices.getOffset (beg);
-
-   int   endPkt = indices.getPacket (end);
-   int   endOff = indices.getOffset (end);
-
-   size_t nticks = (endPkt - begPkt) * 1024
-                 -  begOff + endOff;
+   size_t nticks = (end - beg) / 25;
 
    return nticks;
 }
@@ -214,8 +267,106 @@ uint32_t TpcStreamUnpack::getStatus () const
 {
    pdd::record::TpcStreamHeader  const *hdr = m_stream.getHeader ();
    uint32_t                          status = hdr->getStatus ();
+   if (status == 0)
+   {
+      // Check for missing frames
+      using namespace pdd::access;
+
+      pdd::record::TpcRanges const *ranges = m_stream.getRanges ();
+      unsigned int                  bridge = TpcRanges::getBridge  (ranges);
+      pdd::access::TpcRangesIndices indices (TpcRanges::getIndices (ranges),
+                                                                     bridge);
+      int32_t beg = indices.getBegin ();
+      if (beg == -1)
+      {
+         status = 1;
+      }
+   }
 
    return status;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Tests if this a TpcNormal stream
+                                                                          */
+/* ---------------------------------------------------------------------- */
+bool TpcStreamUnpack::isTpcNormal () const
+{
+   pdd::record::TpcStreamHeader const *hdr = m_stream.getHeader ();
+   bool tpcNormal = hdr->isTpcNormal ();
+
+   // --------------------------------------------------------------
+   // Because of a failure to correctly mark some streams as damaged
+   // perform this additional check,
+   // --------------------------------------------------------------
+   if (tpcNormal && getStatus () != 0) 
+   {
+      tpcNormal = false;
+   }
+
+   return tpcNormal;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Tests if this a TpcDamaged stream
+                                                                          */
+/* ---------------------------------------------------------------------- */
+bool TpcStreamUnpack::isTpcDamaged () const
+{
+   pdd::record::TpcStreamHeader const *hdr = m_stream.getHeader ();
+
+   // --------------------------------------------------------------
+   // Because of a failure to correctly mark some streams as damaged
+   // perform this additional check,
+   // --------------------------------------------------------------
+   bool tpcDamaged = hdr->isTpcDamaged ();
+
+   if (!tpcDamaged && getStatus () != 0) 
+   {
+      tpcDamaged = true;
+   }
+
+   return tpcDamaged;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Returns the stored data format
+  \return One of the enumeration DataFormatType
+                                                                          */
+/* ---------------------------------------------------------------------- */
+TpcStreamUnpack::DataFormatType TpcStreamUnpack::getDataFormatType () const
+{
+   using namespace pdd;
+   using namespace pdd::access;
+
+   record::TpcToc          const     *toc = m_stream.getToc           ();
+   int                           npktDscs = TpcToc::getNPacketDscs (toc);
+   record::TpcTocPacketDsc const *pktDscs = TpcToc::getPacketDscs  (toc);
+
+
+   uint8_t typeMask = 0;
+   for (int idx = 0; idx < npktDscs; idx++)
+   {
+      typeMask |= (TpcTocPacketDsc::isCompressed (pktDscs[idx])) ? 2 : 1;
+   }
+
+   if (typeMask == 1) return DataFormatType::WibFrame;
+   if (typeMask == 2) return DataFormatType::Compressed;
+   if (typeMask == 3) return DataFormatType::Mixed;
+   else               return DataFormatType::Unknown;
 }
 /* ---------------------------------------------------------------------- */
 
@@ -622,6 +773,12 @@ static bool getMultiChannelDataBase (std::vector<TpcAdcVector>      &adcs,
 bool TpcStreamUnpack::getMultiChannelDataUntrimmed (int16_t  *adcs,
                                                     int     nticks) const
 {
+   // -----------------------------------
+   // Only process normal streams for now
+   // -----------------------------------
+   if (!isTpcNormal ()) return false;
+
+
    bool ok = getMultiChannelDataBase (adcs, &m_stream, 0, nticks);
    return ok;
 }
@@ -651,6 +808,12 @@ bool TpcStreamUnpack::getMultiChannelDataUntrimmed (int16_t  *adcs,
 bool TpcStreamUnpack::getMultiChannelDataUntrimmed(int16_t **adcs,
                                                    int     nticks) const
 {
+   // -----------------------------------
+   // Only process normal streams for now
+   // -----------------------------------
+   //// if (!isTpcNormal ()) return false;
+
+
    bool ok = getMultiChannelDataBase (adcs, &m_stream, 0, nticks);
    return ok;
 }
@@ -683,6 +846,12 @@ bool TpcStreamUnpack::
      getMultiChannelDataUntrimmed (std::vector<TpcAdcVector> &adcs) const
 
 {
+   // -----------------------------------
+   // Only process normal streams for now
+   // -----------------------------------
+   //// if (!isTpcNormal ()) return false;
+
+
    bool ok = getMultiChannelDataBase (adcs, &m_stream, 0, -1);
    return ok;
 }
@@ -698,30 +867,10 @@ static inline void getTrimmed (pdd::access::TpcStream const *tpc,
 {
    using namespace pdd;
    using namespace pdd::access;
-
-   pdd::record::TpcRanges const *ranges = tpc->getRanges ();
-   unsigned int                  bridge = TpcRanges::getBridge  (ranges);
-   pdd::access::TpcRangesIndices indices (TpcRanges::getIndices (ranges),
-                                                                 bridge);
-
-   uint32_t begIdx = indices.getBegin ();
-   uint32_t endIdx = indices.getEnd   ();
-
-   int      begPkt = indices.getPacket (begIdx);
-   int      begOff = indices.getOffset (begIdx);
-
-   int      endPkt = indices.getPacket (endIdx);
-   int      endOff = indices.getOffset (endIdx);
-
-
-   // -----------------------------------------------------------
-   // 2017.10.05 -- jjr
-   // -----------------
-   // Corrected the nticks calculation; it previously incorrectly
-   // was (endPkt - begPkt + 1).
-   // -----------------------------------------------------------
-   *nticks = 1024 * (endPkt - begPkt) - begOff + endOff;
-   *beg    = 1024 *  begPkt + begOff;
+   
+   TpcTrimmedRange trimmed (*tpc);
+   *beg         = trimmed.m_beg.m_wibOff;
+   *nticks      = trimmed.m_nticks;
 
    return;
 }
@@ -733,6 +882,11 @@ static inline void getTrimmed (pdd::access::TpcStream const *tpc,
 // method to unpack all channels in a fragment
 bool TpcStreamUnpack::getMultiChannelData (int16_t *adcs) const
 {
+   // -----------------------------------
+   // Only process normal streams for now
+   // -----------------------------------
+   /// if (!isTpcNormal ()) return false;
+
    int    beg;
    int nticks;
 
@@ -743,6 +897,11 @@ bool TpcStreamUnpack::getMultiChannelData (int16_t *adcs) const
 
 bool TpcStreamUnpack::getMultiChannelData (int16_t **adcs) const
 {
+   // -----------------------------------
+   // Only process normal streams for now
+   // -----------------------------------
+   /// if (!isTpcNormal ()) return false;
+
    int    beg;
    int nticks;
 
@@ -753,6 +912,11 @@ bool TpcStreamUnpack::getMultiChannelData (int16_t **adcs) const
 
 bool TpcStreamUnpack::getMultiChannelData(std::vector<TpcAdcVector> &adcs) const
 {
+   // -----------------------------------
+   // Only process normal streams for now
+   // -----------------------------------
+   //// if (!isTpcNormal ()) return false;
+
    int    beg;
    int nticks;
 
@@ -801,8 +965,7 @@ static pdd::record::WibFrame const
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief  Return the timestamp of the beginning of the untrimmed event for
-          the specified channel.
+  \brief  Return the timestamp of the beginning of the untrimmed event
 
   \return The timestamp of the beginning of the untrimmed event.
                                                                           */
@@ -825,12 +988,48 @@ TpcStreamUnpack::timestamp_t TpcStreamUnpack::getTimeStampUntrimmed () const
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief  Return the timestamp of the beginning of the trimmed event for
-          the specified channel.
+  \brief  Returns the timestamps of the beginning of the untrimmed data
+          along with the number of ticks/samples in the untrimmed dat.
+
+  \retval == 0, no errors
+  \retval != 0, error
+
+  \param[out]   nticks  The number of ticks/samples in the untrimmed data
+                        Due to missing/dropped or otherwise not perfectly
+                        time sequential WIB frame data, this may not
+                        correspond to the calculated number between 
+                        \a begin and \a end.
+  \param[out]    begin  The beginning time stamp
+  \param[out]     end   The trigger   time stamp
+                                                                          */
+/* ---------------------------------------------------------------------- */
+uint32_t TpcStreamUnpack::getRangeUntrimmed (size_t       *nticks,
+                                             timestamp_t   *begin,
+                                             timestamp_t     *end) const
+{
+   using namespace pdd;
+   using namespace pdd::access;
+
+   record::TpcRanges           const *ranges = m_stream.getRanges ();
+   unsigned int                       bridge = TpcRanges::getBridge     (ranges);
+   record::TpcRangesTimestamps const     *ts = TpcRanges::getTimestamps (ranges);
+
+   *begin  = TpcRangesTimestamps::getBegin   (ts, bridge);
+   *end    = TpcRangesTimestamps::getEnd     (ts, bridge);
+   *nticks = getNTicksUntrimmed ();
+
+   return 0;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return the timestamp of the beginning of the trimmed event
 
   \return The timestamp of the beginning of the untrimmed event.
 
-  \param[in] ichannel The target ichannel
                                                                           */
 /* ---------------------------------------------------------------------- */
 TpcStreamUnpack::timestamp_t TpcStreamUnpack::getTimeStamp () const
@@ -838,12 +1037,94 @@ TpcStreamUnpack::timestamp_t TpcStreamUnpack::getTimeStamp () const
    using namespace pdd;
    using namespace pdd::access;
 
-   record::TpcRanges       const *ranges = m_stream.getRanges        ();
-   unsigned int                   bridge = TpcRanges::getBridge      (ranges);
-   record::TpcRangesWindow const *window = TpcRanges::getWindow      (ranges);
-   timestamp_t                     begin = TpcRangesWindow::getBegin (window,
-                                                                      bridge);
+   TpcTrimmedRange trimmed (m_stream);
 
-   return      begin;
+   timestamp_t begin = trimmed.m_beg.m_wibTs;
+   return begin;
 }
 /* ---------------------------------------------------------------------- */
+
+
+
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Returns the timestamps of the beginning of the untrimmed data
+          along with the number of ticks/samples in the untrimmed dat.
+
+  \retval == 0, no errors
+  \retval != 0, error
+
+  \param[out]   nticks  The number of ticks/samples in the untrimmed data
+                        Due to missing/dropped or otherwise not perfectly
+                        time sequential WIB frame data, this may not
+                        correspond to the calculated number between 
+                        \a begin and \a end.
+  \param[out]    begin  The beginning time stamp
+  \param[out]     end   The trigger   time stamp
+                                                                          */
+/* ---------------------------------------------------------------------- */
+uint32_t TpcStreamUnpack::getRange (size_t      *nticks,
+                                    timestamp_t  *begin,
+                                    timestamp_t    *end) const
+{
+   using namespace pdd;
+   using namespace pdd::access;
+
+   TpcTrimmedRange trimmed (m_stream);
+
+   *begin  = trimmed.m_beg.m_wibTs;
+   *end    = trimmed.m_end.m_wibTs;
+   *nticks = trimmed.m_nticks;
+
+
+   return 0;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return the timestamp of the beginning of the trimmed event for
+          the specified channel.
+
+  \retval == 0, no errors
+  \retval != 0, errors
+
+  \param[out]   nticks  The predicted number of ticks within the window
+  \param[out]    begin  The beginning time stamp
+  \param[out]  trigger  The trigger   time stamp
+  \param[out]     end   The trigger   time stamp
+
+  \par
+   The number of ticks/samples is strictly a calculation based on the 
+   time span from \a end to \a begin. The actual number of frames, which
+   is given by getRangeUntrimmed, may differ because of dropped/missing
+   or otherwise not perfectly time sequential WIB frames.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+uint32_t TpcStreamUnpack::getRangeWindow (size_t       *nticks,
+                                          timestamp_t   *begin,
+                                          timestamp_t *trigger,
+                                          timestamp_t     *end) const
+{
+   using namespace pdd;
+   using namespace pdd::access;
+
+   record::TpcRanges           const *ranges = m_stream.getRanges   ();
+   unsigned int                       bridge = TpcRanges::getBridge (ranges);
+   record::TpcRangesWindow     const *window = TpcRanges::getWindow (ranges);
+
+   *begin   = TpcRangesWindow::getBegin   (window, bridge);
+   *trigger = TpcRangesWindow::getTrigger (window, bridge);
+   *end     = TpcRangesWindow::getEnd     (window, bridge);
+   *nticks  = (end - begin) / 25;
+
+   return 0;
+}
+/* ---------------------------------------------------------------------- */
+
+

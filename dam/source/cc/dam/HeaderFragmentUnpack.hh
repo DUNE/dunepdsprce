@@ -40,6 +40,10 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.09.10 jjr Added 
+                   missing inline to constructor and assign methods
+                   isOkay to check if the header looks legitimate
+
    2017.09.14 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -67,8 +71,12 @@ public:
    HeaderFragmentUnpack (uint64_t const *buf);
 
 public:
-   static HeaderFragmentUnpack *assign (uint64_t *buf);
-   bool                         isData () const;
+   static HeaderFragmentUnpack const *assign (uint64_t const *buf);
+   static HeaderFragmentUnpack       *assign (uint64_t *buf);
+
+   bool                               isOkay ()              const;
+   bool                               isOkay (size_t nbytes) const;
+   bool                               isData ()              const;
 };
 /* ---------------------------------------------------------------------- */
 /* DEFINITION : HeaderFragmentUnpack                                      */
@@ -87,7 +95,7 @@ public:
    \param[in] buf The 64-bit pointer
                                                                           */
 /* ---------------------------------------------------------------------- */
-HeaderFragmentUnpack::HeaderFragmentUnpack (uint64_t const *buf) :
+inline HeaderFragmentUnpack::HeaderFragmentUnpack (uint64_t const *buf) :
    pdd::Header0 (buf)
 {
    return;
@@ -110,9 +118,31 @@ HeaderFragmentUnpack::HeaderFragmentUnpack (uint64_t const *buf) :
    in the header. 
                                                                           */
 /* ---------------------------------------------------------------------- */
-HeaderFragmentUnpack *HeaderFragmentUnpack::assign (uint64_t *buf)
+inline HeaderFragmentUnpack *HeaderFragmentUnpack::assign (uint64_t *buf)
 {
    HeaderFragmentUnpack *header = reinterpret_cast<decltype(header)>(buf);
+   return header;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief   Recasts a 64-bit pointer as readonly pointer to a 
+           HeaderFragmentUnpack 
+  \return  A pointer to a HeaderFragmentUnpack
+  
+  \param[in] buf  The 64-bit to interpret as a readonly pointer to a
+                  HeaderFragmentUnpack
+
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline HeaderFragmentUnpack 
+const *HeaderFragmentUnpack::assign (uint64_t const *buf)
+{
+   HeaderFragmentUnpack const *header 
+                      = reinterpret_cast<decltype(header)>(buf);
    return header;
 }
 /* ---------------------------------------------------------------------- */

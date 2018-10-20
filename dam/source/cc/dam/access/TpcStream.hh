@@ -29,6 +29,9 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.09.11 jjr Added
+                    isTpcNormal  ()
+                    isTpcDamaged ()
    2017.12.19 jjr Removed the need for specifying a class member as unused
                   by somewhat artificially using it.
    2017.11.02 jjr Modified the unused in __attribute__ ((unused) to be
@@ -98,6 +101,10 @@ public:
    uint32_t                            getCsf    () const;
    uint32_t                            getStatus () const;
 
+public:
+   bool       isTpcNormal   () const;
+   bool       isTpcDamaged  () const;
+
 private:
    void                         const *getReserved (int idx) const;
 
@@ -144,6 +151,8 @@ inline pdd::record::TpcPacket       const *TpcStream::getPacket () const
 
 inline void                      const  *TpcStream::getReserved (int idx) const
 { return m_rsvd[idx]; }
+/* ---------------------------------------------------------------------- */
+/*   END: TpcStream                                                       */
 /* ---------------------------------------------------------------------- */
 } /* END: namespace access                                                */
 /* ---------------------------------------------------------------------- */

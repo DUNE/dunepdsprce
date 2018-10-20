@@ -18,6 +18,14 @@
 #
 #     DATE   WHO WHAT
 # ---------- --- ----------------------------------------------------------- 
+# 2018.08.30 jjr Bump version of libprotodune-dam to 1.1.0. This version
+#                adds methods to
+#                   get all the relevant timestamps
+#                   query Tpc record types (Normal, Damaged, etc)
+#                   query Tpc data formats (WibFrame, Compressed, etc)
+#
+# 2018.08.20 jjr Bump version of libprotodune-dam to 1.0.3. This version
+#                adds decoding of compressed TPC data
 # 2017.12.19 jjr Bump version of libprotodune-dam to 0.0.4. This version 
 #                accepts the interleaved ADC byte streams.
 # 2017.11.30 jjr Bump version.  The code did not change, but there was a
@@ -146,6 +154,13 @@ ifeq ($(TARGET_CPU),x86_64)
   PdWibFrameExtract_ALIAS      := PdWibFrameExtract
   EXECUTABLES                  += PdWibFrameExtract
 
+  PdEntropy_SRCDIR             := $(PKG_CC_ROOT)/ptd
+  PdEntropy_CCSRCFILES         := PdEntropy.cc
+  PdEntropy__CPPFLAGS          := -g
+  PdEntropy_LDFLAGS            := $(dam-lib)
+  PdEntropy_ALIAS              := PdEntropy
+  EXECUTABLES                  += PdEntropy
+
 
 #  capabilities_SRCDIR      := $(PKG_CC_ROOT)/src
 #  capabilities_CSRCFILES   := capabilities.c
@@ -160,9 +175,12 @@ endif
 # ---------------------------
 
 libprotodune-dam_CCSRCFILES := Headers.cc             \
+                               RceFragmentUnpack.cc   \
+                               HeaderFragmentUnpack.cc\
                                DataFragmentUnpack.cc  \
                                TpcFragmentUnpack.cc   \
                                TpcStreamUnpack.cc     \
+                               TpcStreamAssessor.cc   \
                                DataFragment.cc        \
                                Identifier.cc          \
                                Originator.cc          \
@@ -179,7 +197,7 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
 libprotodune-dam__CCFLAGS   := -g
 libprotodune-dam__CXXFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
-libprotodune-dam_VERSION    := 1.0.3
+libprotodune-dam_VERSION    := 1.1.0
 SHAREABLES                  += libprotodune-dam
 
 # ----------------------------------------------------------

@@ -464,7 +464,13 @@ inline unsigned int WibColdData::getStreamErr2   (uint64_t w0)
 
 inline unsigned int WibColdData::getReserved0    (uint64_t w0)
 {
-   return PDD_EXTRACT64 (w0, Mask0::Reserved0, Offset0::Reserved0);
+   // ----------------------------------------------------------
+   // 2018.10.09 -- jjr
+   // -----------------
+   // This field has been eliminated when jjr became aware of it
+   // ----------------------------------------------------------
+   return 0;
+   ///return PDD_EXTRACT64 (w0, Mask0::Reserved0, Offset0::Reserved0);
 }
 
 inline uint32_t     WibColdData::getCheckSums    (uint64_t w0)

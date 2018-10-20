@@ -40,6 +40,10 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.09 jjr Updated the Stream 1 & 2 Error fields to reflect a change
+                  from a nibble to a byte.  This eliminates 8-b reserved
+                  field that was in the next 8 bits.
+                  Comments also corrected
    2018.07.13 jjr Corrected Mask0:Id from 0x3ff -> 0x7ff.  There are 11 
                   bits in the WIB identifier.  Also the Offset0::Crate
                   was incorrect 18 -> 16.
@@ -66,12 +70,12 @@
       1     Timestamp [64]
 
               ColdData Stream 1
-      2     CvtCnt[16] | ChkSums_hi[16] | ChkSums_lo[16] | Rsvd[8] | Err2_1[8]
+      2     CvtCnt[16] | ChkSums_hi[16] | ChkSums_lo[16] | SErr_2[8] | SErr2_1[18]
       3              Hdrs[32]           |       Rsvd[16] |    ErrReg[16]
       4-15  ColdData.Adcs
 
             ColdData Stream 2
-      16    CvtCnt[16] | ChkSums_hi[16] | ChkSums_lo[16] | Rsvd[8] | Err2_1[8]
+      16    CvtCnt[16] | ChkSums_hi[16] | ChkSums_lo[16] | SErr_2[8] | SErr2_1[18]
       17             Hdrs[32]           |       Rsvd[16] |    ErrReg[16]
       18-29 ColdData.Adcs
 
@@ -86,10 +90,10 @@
  0   |      Error     |    Reserved[24]         SltCrate|FbrVersn   K28.5|
  1   |                    GPS TImestamp[64]                              |
      +================+================+================+================+
-     |                            Channels 0 - 127                       |
+     |                            Channels 0 - 63                        |
      +----------------+----------------+----------------+----------------+
- 2   |          Timestamp              |   CheckSums    |  Rsvd   SErr   |
- 3   |           Hdrs[7-0]             |    Reserved    |  Error Register|
+ 2   |          Timestamp              |   CheckSums    | SErr 2  SErr 1 |
+ 3   |           Hdrs[7-0]             |    Reserved    |   Registers    |
      +----------------+----------------+----------------+----------------+
  4   |5555444444444444 3333333333332222 2222222211111111 1111000000000000| S1
  5   |aaaaaaaa99999999 9999888888888888 7777777777776666 6666666655555555|  &
@@ -107,10 +111,10 @@
 14   |aaaaaaa999999999 9999888888888888 7777777777776666 6666666655555555|  &
 15   |ffffffffffffeeee eeeeeeeedddddddd ddddcccccccccccc bbbbbbbbbbbbaaaa| S8
      +================+================+================+================+
-     |                            Channels 128 - 255                     |
+     |                            Channels 64 - 127                      |
      +----------------+----------------+----------------+----------------+
-16   |          Timestamp              |    CheckSums   |  Rsvd   SErr   |
-17   |           Hdrs[7-0]             |    Reserved    |  Error Register|
+16   |          Timestamp              |    CheckSums   | SErr 2  SErr 1 |
+17   |           Hdrs[7-0]             |    Reserved    |    Register    |
      +----------------+----------------+----------------+----------------+
 18   |5555444444444444 3333333333332222 2222222211111111 1111000000000000| S1
 19   |aaaaaaaa99999999 9999888888888888 7777777777776666 6666666655555555|  &
@@ -188,15 +192,16 @@ public:
    enum class Size0 : int
    {
                           /* -----------------------------------------    */
-                          /* - Stream Errors - 1 8 bit field              */
-                          /*      2 x 4 bit fields for Stream 1 & 2       */
+                          /* - Stream Errors - 1 16 bit field             */
+                          /*      2 x 8 bit fields for Stream 1 & 2       */
                           /* -------------------------------------------- */
-      StreamErr    =  8,  /*!< Size of the both Stream Error bit fields   */
-      StreamErr1   =  4,  /*!< Size of the Stream Error 1 bit field       */
-      StreamErr2   =  4,  /*!< Size of the Stream Error 2 bit field       */
+      StreamErr    = 16,  /*!< Size of the both Stream Error bit fields   */
+      StreamErr1   =  8,  /*!< Size of the Stream Error 1 bit field       */
+      StreamErr2   =  8,  /*!< Size of the Stream Error 2 bit field       */
                              /* ----------------------------------------- */
 
-      Reserved0    =  8,  /*!< Size of the reserved field                 */
+
+      Reserved0    =  0,  /*!< Old reserved field has been eliminated    */
 
                           /* -----------------------------------------    */
                           /* - CheckSums 32 bits,                         */
@@ -227,10 +232,10 @@ public:
                           /* -----------------------------------------    */
       StreamErr    =  0,  /*!< Offset to both Stream Error bit fields     */
       StreamErr1   =  0,  /*!< Offset to Stream Error 1 bit field         */
-      StreamErr2   =  4,  /*!< Offset to Stream Error 2 bit field         */
+      StreamErr2   =  8,  /*!< Offset to Stream Error 2 bit field         */
                           /* -------------------------------------------- */
 
-      Reserved0    =  8,  /*!< Offset to the reserved field               */
+      Reserved0    =  0,  /*!< Offset to the reserved field --Eliminated  */
 
                           /* -------------------------------------------- */
                           /* - CheckSums 32 bits,                         */ 
@@ -240,7 +245,7 @@ public:
       CheckSums    = 16,  /*!< Offset to all the checksum fields          */
       CheckSumsLo  = 16,  /*!< Offset to low checksum fields              */
       CheckSumLoA  = 16,  /*!< Offset to low checksum field, stream A     */
-      CheckSumLoB  = 24,  /*!< Offset to hi  checksum field, stream A     */
+      CheckSumLoB  = 24,  /*!< Offset to hi  checksum field, stream B     */
       CheckSumsHi  = 32,  /*!< Offset to hi  checksum fields              */
       CheckSumHiA  = 32,  /*!< Offset to hi  checksum field, stream A     */
       CheckSumHiB  = 40,  /*!< Offset to hi  checksum field, stream B     */
@@ -257,14 +262,14 @@ public:
    enum class Mask0 : uint32_t
    {
                              /* ----------------------------------------- */
-                             /* - Stream Errors - 1 8 bit field           */
-                             /*   2 x 4 bit fields for Stream 1 & 2       */
+                             /* - Stream Errors - 1 16 bit field          */
+                             /*   2 x 8 bit fields for Stream 1 & 2       */
                              /* ----------------------------------------- */
-      StreamErr    = 0xff,   /*!< Offset to Stream Error bit fields       */
-      StreamErr1   = 0x0f,   /*!< Offset to Stream Error 1 bit field      */
-      StreamErr2   = 0x0f,   /*!< Offset to Stream Error 2 bit field      */
+      StreamErr    = 0xffff, /*!< Mask for  Stream Error bit fields       */
+      StreamErr1   = 0xff,   /*!< Mask for  Stream Error 1 bit field      */
+      StreamErr2   = 0xff,   /*!< Mask for  Stream Error 2 bit field      */
                              /* ----------------------------------------- */
-      Reserved0    = 0xff,   /*!< Offset to the reserved field            */
+      Reserved0    = 0x00,   /*!< Mask for the reserved field--Eliminated */
 
 
                              /* ----------------------------------------- */
@@ -273,13 +278,13 @@ public:
                              /*   4 x 8 bits for LoA,LoB,HiA and HiB      */
                              /* ----------------------------------------- */
       CheckSums    = 0xffffffff,
-                            /*!< Offset to all the checksum fields        */
-      CheckSumsLo  = 0xffff,/*!< Offset to low checksum fields            */
-      CheckSumLoA  = 0xff,  /*!< Offset to low checksum field, stream A   */
-      CheckSumLoB  = 0xff,  /*!< Offset to hi  checksum field, stream A   */
-      CheckSumsHi  = 0xffff,/*!< Offset to hi  checksum fields            */
-      CheckSumHiA  = 0xff,  /*!< Offset to hi  checksum field, stream A   */
-      CheckSumHiB  = 0xff,  /*!< Offset to hi  checksum field, stream B   */
+                            /*!< Mask for  all the checksum fields        */
+      CheckSumsLo  = 0xffff,/*!< Mask for  low checksum fields            */
+      CheckSumLoA  = 0xff,  /*!< Mask for  low checksum field, stream A   */
+      CheckSumLoB  = 0xff,  /*!< Mask for  low checksum field, stream B   */
+      CheckSumsHi  = 0xffff,/*!< Mask for  hi  checksum fields            */
+      CheckSumHiA  = 0xff,  /*!< Mask for  hi  checksum field, stream A   */
+      CheckSumHiB  = 0xff,  /*!< Mask for  hi  checksum field, stream B   */
                             /* ------------------------------------------ */
 
       ConvertCount = 0xffff /*!< Size of the cold data convert count      */

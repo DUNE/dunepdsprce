@@ -611,6 +611,26 @@ static inline uint64_t transposeF (uint64_t w0_2,
 }
 
 
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Calclulate a 64-bit address offset 16 bit index
+  \return The calculated address
+
+  \param[in]    ptr64  The 64-bit base address
+  \param[in] offset16  The 16-bit offset
+                                                                          */
+/* ---------------------------------------------------------------------- */
+static inline uint64_t *adr64 (uint64_t *ptr64, int offset16)
+{
+   uint16_t *ptr16  = reinterpret_cast<uint16_t *>(ptr64) + offset16;
+   ptr64 = reinterpret_cast<uint64_t *>(ptr16);
+   return ptr64;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
 /* ---------------------------------------------------------------------- *//*!
 
   \brief Transponse 16 channels x 4 timeslices
@@ -640,26 +660,26 @@ static void transposeAdcs16x4_kernel (uint64_t      *dst64,
 
    // Channel = 0x0
   *dst64  = transpose0 (w0_0, w1_0, w2_0, w3_0);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
    //printf ("t16x4[0] = %16.16" PRIx64 "\n", dst);
    
    // Channel  0x1
    dst    = transpose1 (w0_0, w1_0, w2_0, w3_0);
   *dst64  = dst;
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
    //printf ("t16x4[1] = %16.16" PRIx64 "\n", dst);
 
    
    // Channel  0x2
    dst    = transpose2 (w0_0, w1_0, w2_0, w3_0);
   *dst64  = dst;
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
    
    // Channel  0x3
    dst    = transpose3 (w0_0, w1_0, w2_0, w3_0);
   *dst64  = dst;
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
 
    uint64_t w0_1 = *src0++;  
@@ -670,33 +690,33 @@ static void transposeAdcs16x4_kernel (uint64_t      *dst64,
 
    // Channel 0x4
   *dst64  = transpose4 (w0_0,w0_1,  w1_0,w1_1,  w2_0,w2_1,  w3_0,w3_1);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
    //printf ("Channel 4 = %16.16" PRIx64 "\n", dst);
 
 
    // Channel 0x5
   *dst64  = transpose5 (w0_0,w0_1,  w1_0,w1_1,  w2_0,w2_1,  w3_0,w3_1);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
 
    // Channel 0x6
   *dst64  = transpose6 (w0_1, w1_1, w2_1, w3_1);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
 
    // Channel 0x7
   *dst64  = transpose7 (w0_1, w1_1, w2_1, w3_1);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
    
    // Channel 0x8
   *dst64  = transpose8 (w0_1, w1_1, w2_1, w3_1);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
    
    // Channel 0x9
   *dst64  = transpose9 (w0_1, w1_1, w2_1, w3_1);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
    //printf ("t16x4[9] = %16.16" PRIx64 "\n", dst);
    
    uint64_t w0_2 = *src0++;  
@@ -707,32 +727,30 @@ static void transposeAdcs16x4_kernel (uint64_t      *dst64,
 
    // Chanel 0xA
   *dst64  = transposeA (w0_1,w0_2,  w1_1,w1_2,  w2_1,w2_2,  w3_1,w3_2);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
    
 
    // Channel 0xB
   *dst64  = transposeB (w0_1,w0_2,  w1_1,w1_2,  w2_1,w2_2,  w3_1,w3_2);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
       
 
    // Channel 0xC
   *dst64  = transposeC (w0_2, w1_2, w2_2, w3_2);
-   dst64 += ndstStride;
-
+   dst64  = adr64 (dst64, ndstStride);
 
    // Channel 0xD  
   *dst64  = transposeD (w0_2, w1_2, w2_2, w3_2);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
    
    // Channel 0xE
   *dst64  = transposeE (w0_2, w1_2, w2_2, w3_2);
-   dst64 += ndstStride;
+   dst64  = adr64 (dst64, ndstStride);
 
 
    // Channel 0xF
   *dst64  = transposeF (w0_2, w1_2, w2_2, w3_2);
-   dst64 += ndstStride;
 
    return;
 }
@@ -757,11 +775,11 @@ static inline void transposeAdcs16x8_kernel (int16_t        *dst,
                                              uint64_t const *src)
 {
    uint64_t  *dst64 = (uint64_t *)dst;
-   int ndstStride64 = ndstStride * sizeof (*dst) / sizeof (*dst64);
+   //int ndstStride64 = ndstStride * sizeof (*dst) / sizeof (*dst64);
 
 
-   transposeAdcs16x4_kernel (dst64,   ndstStride64, src);
-   transposeAdcs16x4_kernel (dst64+1, ndstStride64, 
+   transposeAdcs16x4_kernel (dst64,   ndstStride, src);
+   transposeAdcs16x4_kernel (dst64+1, ndstStride, 
                     src+4*sizeof (WibFrame) / sizeof (*src));
 
    return;

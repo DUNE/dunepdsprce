@@ -54,6 +54,7 @@
 
 #include "dam/access/TpcPacket.hh"
 #include "dam/records/TpcPacket.hh"
+#include "dam/records/TpcToc.hh"
 #include "dam/access/WibFrame.hh"
 
 
@@ -209,7 +210,11 @@ TPCPACKET_IMPL pdd::access::WibFrame const *
                                 unsigned int                      type,
                                 unsigned int                       o64)
 {
-   return reinterpret_cast<pdd::access::WibFrame const *>(body->m_w64 + o64);
+   bool isWibFrame = type == static_cast<decltype(type)>
+                    (pdd::record::TpcTocPacketDsc::Type::WibFrame);
+   return isWibFrame 
+         ? reinterpret_cast<pdd::access::WibFrame const *>(body->m_w64 + o64)
+         : 0;
 }
 /* ---------------------------------------------------------------------- */
 /* END: TpcPacketBody                                                     */

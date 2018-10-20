@@ -2,8 +2,8 @@
 
 /* ---------------------------------------------------------------------- *//*!
  *
- *  @file     PdWibFrameExtract.cc
- *  @brief    Extracts the WIB frames from a data file
+ *  @file     PdEntropy.cc
+ *  @brief    Calcuates the entropy for data packets
  *  @verbatim
  *                               Copyright 2018
  *                                    by
@@ -25,8 +25,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
-   2018.08.30 jjr Added check for TpcEmpty data fragments.
-   2017.08.14 jjr Created
+   2017.09.15 jjr Created
   
 \* ---------------------------------------------------------------------- */
 
@@ -45,10 +44,7 @@
 #include <cstdio>
 
 
-static void print_summary   (TpcStreamUnpack  const *tpcStream,
-                             int                      nwritten,
-                             int                         total)
-            __attribute__ ((unused));
+static void print_summary (TpcStreamUnpack const *tpcStream);
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -65,9 +61,11 @@ public:
    int            m_npackets; /*!< Number of 1024 packets to extract      */
    int            m_ifilecnt; /*!< Input  file name count                 */ 
    char *const *m_ifilenames; /*!< Input  file name                       */
-   char const   *m_ofilename; /*!< Output file names                      */
-   enum Reader::FileType 
-               m_ifiletype;   /*!< The input file type                    */
+   Reader::FileType
+                 m_ifiletype; /*!< The input file type                    */
+   int           m_printhist; /*!< Print histograms                       */
+   int              m_ovrflw; /*!< Overflow trigger                       */
+
 };
 /* ---------------------------------------------------------------------- */
 
@@ -82,21 +80,24 @@ public:
                                                                           */
 /* ---------------------------------------------------------------------- */
 Prms::Prms (int argc, char *const argv[]) :
-   m_npackets   ((unsigned)(0x40000000)/1024),
+   m_npackets   (0x7fffffff),
    m_ifilecnt   (0),
    m_ifilenames (NULL),
-   m_ofilename  ("/dev/null"),
-   m_ifiletype  (Reader::FileType::Binary)
+   m_ifiletype  (Reader::FileType::Binary),
+   m_printhist  (0),
+   m_ovrflw     (0x7fffffff)
+
 {
    char c;
-   while ( (c = getopt (argc, argv, "n:o:bg")) != -1)
+   while ( (c = getopt (argc, argv, "O:n:o:bgp:")) != -1)
    {
       switch (c)
       {
       case 'b': { m_ifiletype = Reader::FileType::Binary;    break; }
       case 'g': { m_ifiletype = Reader::FileType::TextGdb64; break; }
       case 'n': { m_npackets  = strtoul (optarg, NULL, 0);   break; }
-      case 'o': { m_ofilename = optarg;                      break; }
+      case 'O': { m_ovrflw    = strtoul (optarg, NULL, 0);   break; }
+      case 'p': { m_printhist = strtoul (optarg, NULL, 0);   break; }
       }
    }  
 
@@ -119,62 +120,50 @@ Prms::Prms (int argc, char *const argv[]) :
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \class WibFrameExtracter
-  \brief Extracts the wib frames from a TPC stream and writes them to an
-         output file
+  \class Entropy
+  \brief Calculates the entropy of the data packets
                                                                           */
 /* ---------------------------------------------------------------------- */
-class WibFrameExtracter 
+class Entropy
 {
 public:
    static size_t const MaxBuf = 10 * 1024 * 1024;
 
 public:
-   WibFrameExtracter (char const      *ofilename, 
-                      int              npackets);
+   Entropy (int npackets, int printhist, int ovrflw);
 
 public:
-   ~WibFrameExtracter ();
+   ~Entropy ();
 
 public:
-   int  open  (char const *ifilename, Reader::FileType ifiletype);
-   int  read  ();
-   int  close ();
+   int  open    (char const *ifilename, Reader::FileType ifiletype);
+   int  read    ();
+   int  close   ();
+   bool process ();
+   bool entropy (TpcStreamUnpack const *tpcStream);
 
-   bool write ();
-   bool writeFragment  ();
-   bool writeTpcStream (TpcStreamUnpack const *tpcStream);
+   static void histogram (uint16_t      *hist, int nhist, 
+                          int16_t const *adcs, int nticks);
 
 public: 
    Reader *m_reader;
-   int        m_ofd;  
-   int    m_nframes;
-   int      m_ntogo;
-   uint64_t  *m_buf;
+
+   int   m_npackets; /*!< Number of packets to process                    */
+   int      m_ntogo; /*!< Number of packets left to process               */
+   int  m_printhist; /*!< Print histograms                                */
+   int     m_ovrflw; /*!< Print channel's ADCs if # overflows>=this value */
+   uint64_t  *m_buf; /*!< Pointer to the input data buffer                */
 };
 /* ---------------------------------------------------------------------- */
 
 
-WibFrameExtracter::WibFrameExtracter (char const      *ofilename, 
-                                      int               npackets) 
+Entropy::Entropy (int npackets, int printhist, int ovrflw) 
 {
-   m_ofd = ::creat (ofilename, S_IRUSR | S_IWUSR
-                             | S_IRGRP | S_IWGRP
-                             | S_IROTH);
-
-   if (m_ofd < 0)
-   {
-      fprintf (stderr, "Error: can't open output file %s\n"
-                       "       %s\n",
-               ofilename,
-               strerror (errno));
-      exit (-1);
-   }
-
-   m_nframes = 1024 * npackets;
-   m_ntogo   = m_nframes;
-   m_buf     = reinterpret_cast<decltype (m_buf)>(malloc (MaxBuf));
-
+   m_npackets  = npackets;
+   m_ntogo     = m_npackets;
+   m_ovrflw    = ovrflw;
+   m_printhist = printhist;
+   m_buf       = reinterpret_cast<decltype (m_buf)>(malloc (MaxBuf));
    return;
 }
 /* ---------------------------------------------------------------------- */   
@@ -184,13 +173,12 @@ WibFrameExtracter::WibFrameExtracter (char const      *ofilename,
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief WibFrameExtracter destructor
+  \brief Entropy destructor
                                                                           */
 /* ---------------------------------------------------------------------- */
-WibFrameExtracter::~WibFrameExtracter ()
+Entropy::~Entropy ()
 {
    delete m_reader;
-   ::close (m_ofd);
    return;
 }
 /* ---------------------------------------------------------------------- */
@@ -198,7 +186,7 @@ WibFrameExtracter::~WibFrameExtracter ()
 
 
 /* ---------------------------------------------------------------------- */
-int WibFrameExtracter::open (char const *ifilename, Reader::FileType ifiletype)
+int Entropy::open (char const *ifilename, Reader::FileType ifiletype)
 {
    m_reader = &ReaderCreate (ifilename, ifiletype);
    if (m_reader == 0) return -1;
@@ -214,7 +202,7 @@ int WibFrameExtracter::open (char const *ifilename, Reader::FileType ifiletype)
   \brief Close the input file reader
                                                                           */
 /* ---------------------------------------------------------------------- */
-int WibFrameExtracter::close ()
+int Entropy::close ()
 {
    delete m_reader;
    m_reader = 0;
@@ -230,7 +218,7 @@ int WibFrameExtracter::close ()
   \retval == 1  EOF
                                                                           */
 /* ---------------------------------------------------------------------- */
-int WibFrameExtracter::read ()
+int Entropy::read ()
 {
 
    HeaderFragmentUnpack *header = HeaderFragmentUnpack::assign (m_buf);
@@ -273,73 +261,6 @@ int WibFrameExtracter::read ()
 
 
 
-/* ---------------------------------------------------------------------- */   
-bool WibFrameExtracter::write ()
-{
-   bool   done = writeFragment ();
-   return done;
-}
-/* ---------------------------------------------------------------------- */   
-
-
-
-static int extract (WibFrameExtracter &extracter);
-
-
-
-/* ---------------------------------------------------------------------- */
-int main (int argc, char *const argv[])
-{
-   // -----------------------------------
-   // Extract the command line parameters
-   // -----------------------------------
-   Prms     prms (argc, argv);
-   WibFrameExtracter extracter (prms.m_ofilename,
-                                prms.m_npackets);
-
-   for (int idx = 0; idx < prms.m_ifilecnt; idx++)
-   {
-      printf ("Processing: %s\n", prms.m_ifilenames[idx]);
-      int status = extracter.open (prms.m_ifilenames[idx],
-                                   prms.m_ifiletype);
-      if (status) break;
-
-      bool done = extract (extracter);
-      if (done) break;
-   }
-
-   
-   extracter.~WibFrameExtracter ();
-
-   return 0;
-}
-/* ---------------------------------------------------------------------- */
-
-
-static int extract (WibFrameExtracter &extracter)
-{
-   while (1)
-   {
-      {
-         int done = extracter.read  ();
-         if (done) break;
-      }
-
-      {
-         bool done = extracter.write ();
-         if (done) break;
-      }
-   }
-
-   extracter.close ();
-
-   return 0;
-}
-/* ---------------------------------------------------------------------- */
-
-
-
-
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -348,7 +269,7 @@ static int extract (WibFrameExtracter &extracter)
   \param[in] buf The data fragment to process
                                                                           */
 /* ---------------------------------------------------------------------- */
-bool WibFrameExtracter::writeFragment ()
+bool Entropy::process ()
 {
    uint64_t const *buf = m_buf;
 
@@ -373,24 +294,13 @@ bool WibFrameExtracter::writeFragment ()
       // ----------------------------------------------
       // Is this record an error-free TPC data fragment
       // ---------------------------------------------
-      if (df.isTpcNormal () || df.isTpcDamaged ())
+      if (df.isTpcNormal ())
       {
-         /*
-         char const *tpcType = df.isTpcNormal  () ? "TpcNormal"
-                             : df.isTpcDamaged () ? "TpcDamaged"
-                             : "TpcUnknown";
-         
-         printf ("Have TpcStream data type: %s\n", tpcType);
-         */
-
          // ------------------------------------------------
          // Having verified that this is a TPC data fragment
          // can now convert it an analyze it as such
          // ------------------------------------------------
          TpcFragmentUnpack tpcFragment (df);
-
-         ///df.printHeader  ();
-         ///df.printTrailer ();
 
          // --------------------------------------------
          // Get the number and loop over the TPC streams
@@ -400,7 +310,7 @@ bool WibFrameExtracter::writeFragment ()
          for (int istream = 0; istream < nstreams; ++istream)
          {
             TpcStreamUnpack const *tpcStream = tpcFragment.getStream (istream);
-            bool                        done = writeTpcStream (tpcStream);
+            bool                        done = entropy (tpcStream);
             if (done) { return true; }
          }
       }
@@ -412,7 +322,6 @@ bool WibFrameExtracter::writeFragment ()
          printf ("Have TpcStream data type: %s\n", tpcType);
          
       }
-      //df.printTrailer ();
    }
 
    return false;
@@ -420,99 +329,190 @@ bool WibFrameExtracter::writeFragment ()
 /* ---------------------------------------------------------------------- */
 
 
-
-
-
-/* ---------------------------------------------------------------------- *\
- |                                                                        |
- |  The stuff below is not part of the high level user interface.  While  |
- |  it is public, these methods below are meant for lower level access.   |
- |  As such, they take a bit more expertise.                              |
- |                                                                        |
-\* ---------------------------------------------------------------------- */
-#include "dam/access/Headers.hh"
-#include "dam/access/TpcStream.hh"
-#include "dam/access/TpcRanges.hh"
-#include "dam/access/TpcToc.hh"
-#include "dam/access/TpcPacket.hh"
-
+static void  print (uint16_t const *hist, int nbins, int ichan, int ipacket);
 
 /* ---------------------------------------------------------------------- *//*!
 
-  \brief Exercises the low level routines that are the backbone of the
+  \brief Calculates the entropy of the specified stream
          TpcStreamUnpack interface.
 
   \param[in]  tpcStream  The target TPC stream.
                                                                           */
 /* ---------------------------------------------------------------------- */
-bool WibFrameExtracter::writeTpcStream (TpcStreamUnpack const *tpcStream)
+bool Entropy::entropy (TpcStreamUnpack const *tpcStream)
 {
    using namespace pdd;
    using namespace pdd::access;
 
-   int fd = m_ofd;
+   print_summary (tpcStream);
 
-   ///print_summary (tpcStream);
+   int nchannels = tpcStream->getNChannels       ();
+   int nticks    = tpcStream->getNTicksUntrimmed ();
+   int adcCnt    = nchannels * nticks;
 
-   TpcStream const &stream = tpcStream->getStream     ();
-
-   // -----------------------
-   // Construct the accessors
-   // -----------------------
-   TpcToc           toc    (stream.getToc    ());
-   TpcPacket        pktRec (stream.getPacket ());
-   TpcPacketBody    pktBdy (pktRec.getRecord ());
-
-   uint64_t const  *pkts  = pktBdy.getData    ();
-   int              npkts = toc.getNPacketDscs ();
+   int     adcNBytes = adcCnt    * sizeof (int16_t);
+   int16_t *adcsBuf = reinterpret_cast <decltype (adcsBuf)>(malloc (adcNBytes));
 
 
-   for (int pktNum = 0; pktNum < npkts; ++pktNum)
+   bool okay = tpcStream->getMultiChannelDataUntrimmed (adcsBuf, nticks);
+   if (okay)
    {
+      int16_t const *adcs = adcsBuf;
+      uint16_t   hist[32];
+      int           nbins = sizeof (hist) / sizeof (hist[0]); 
 
-      TpcTocPacketDsc pktDsc (toc.getPacketDsc (pktNum));
-      unsigned int    pktOff = pktDsc.getOffset64 ();
-      uint64_t const    *ptr = pkts + pktOff;
-
-      if (pktDsc.isWibFrame ())
+      for (int ichan = 0; ichan < nchannels; ichan++)
       {
-         unsigned nWibFrames = pktDsc.getNWibFrames ();
+         for (int ipacket = 0; ipacket < nticks/1024; ipacket++)
+         {
+            uint16_t hist[32];
+            {
+               histogram (hist, nbins, adcs + ipacket * 1024, 1024);
+               if (hist[0] >= m_ovrflw) 
+               {
+                  printf ("\nLarge overflow\n");
+                  print (hist, nbins, ichan, ipacket);
 
-         m_ntogo -= nWibFrames;
-         if (m_ntogo < 0) { putchar ('\n'); return false; }
-         
+                  for (int idx = 0; idx < 1024; idx++)
+                  {
+                     if ( (idx & 0xf) == 0) putchar ('\n');
+                     printf (" 0x%3.3x", adcs[ipacket * 1024 + idx]);
+                  }
+                  putchar ('\n');
 
-         print_summary (tpcStream, m_nframes - m_ntogo,m_nframes);
+               }
+               else if (ichan < m_printhist)
+               {
+                  print (hist, nbins, ichan, ipacket);
+               }
+            }
+         }
 
-
-
-
-         /*
-           unsigned int   pktType = pktDsc.getType ();
-           unsigned int    pktLen = pktDsc.getLen64 ();
-
-         printf ("Packet[%2u:%1u(WibFrames ).%4d] = "
-                 " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n",
-                 pktNum, pktType, nWibFrames,
-                 ptr[0], ptr[1], ptr[2]);
-            */
-
-         ::write (fd, ptr, nWibFrames * sizeof (WibFrame));
-
+         adcs += nticks;
       }
-      else if (pktDsc.isCompressed ())
-      {
-         fprintf (stderr, "Error: Can't handle compressed frames yet\n");
-      }
+
+
    }
 
-   putchar ('\n');
+   free (adcsBuf);
+
    return false;
 }
 /* ---------------------------------------------------------------------- */
 
 
 
+/* ---------------------------------------------------------------------- */
+void Entropy::histogram (uint16_t      *hist, int nhist, 
+                         int16_t const *adcs, int nticks)
+{
+   memset (hist, 0, sizeof (*hist) * nhist);
+   uint16_t prv = adcs[0];
+
+   //// printf ("Diff[  0]:    ");
+   for (int itick = 1; itick < nticks; itick++)
+   {
+      int  cur = adcs[itick];
+      int diff = prv - cur;
+
+/*
+      if ( (itick & 0x1f) == 0) printf ("Diff[%3x]:", itick);
+      printf (" %3d", diff);
+      if ( (itick & 0x1f) == 0x1f) putchar ('\n');
+*/                                    
+
+      int sym  = (diff << 1) | 1;
+      if (diff < 0)
+      {
+         sym = -sym + 1;
+      }
+
+      if (sym >= nhist)
+      {
+         sym = 0;
+      }
+
+      hist[sym]++;
+      prv = cur;
+   }
+
+   return;
+}
+
+/* ---------------------------------------------------------------------- */
+static void  print (uint16_t const *hist, int nbins, int ichan, int ipacket)
+{
+   for (int ibin = 0; ibin < nbins; ibin++)
+   {
+      if ( (ibin & 0x1f) ==    0) printf ("Hist[%3d.%2d.%2d] =", ichan, ipacket, ibin);
+      printf (" %3x", (int)hist[ibin]);
+      if ( (ibin & 0x1f) == 0x1f) putchar ('\n');
+   }
+
+   if (nbins & 0x1f) putchar ('\n');
+
+   return;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+static int calculate (Entropy &entropy);
+
+
+
+/* ---------------------------------------------------------------------- */
+int main (int argc, char *const argv[])
+{
+   // -----------------------------------
+   // Extract the command line parameters
+   // -----------------------------------
+   Prms     prms (argc, argv);
+   Entropy  entropy (prms.m_npackets, prms.m_printhist, prms.m_ovrflw);
+
+   for (int idx = 0; idx < prms.m_ifilecnt; idx++)
+   {
+      printf ("Processing: %s\n", prms.m_ifilenames[idx]);
+      int status = entropy.open (prms.m_ifilenames[idx],
+                                 prms.m_ifiletype);
+      if (status) break;
+
+      bool done = calculate (entropy);
+      entropy.close ();
+
+      if (done) break;
+   }
+
+   
+   ///entropy.~Entropy ();
+
+   return 0;
+}
+/* ---------------------------------------------------------------------- */
+
+
+static int calculate (Entropy &entropy)
+{
+   while (1)
+   {
+      {
+         int done = entropy.read  ();
+         if (done) break;
+      }
+
+      {
+         bool done = entropy.process ();
+         if (done) break;
+      }
+   }
+
+   return 0;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+#if 1
 /* ---------------------------------------------------------------------- *//*!
 
   \brief Prints a summary of the specified \a tpcStream
@@ -522,19 +522,17 @@ bool WibFrameExtracter::writeTpcStream (TpcStreamUnpack const *tpcStream)
   \param[in]     total The total to write
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void print_summary (TpcStreamUnpack const *tpcStream,
-                           int                     nwritten,
-                           int                        total)
+static void print_summary (TpcStreamUnpack const *tpcStream)
 {
    TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
    
-   printf ("Writing: WibId:%2d.%1d.%1d  %6d/%6d\r",
+   printf ("Processing: WibId:%2d.%1d.%1d\n",
            id.getCrate (),
            id.getSlot  (),
-           id.getFiber (),
-           nwritten,
-           total);
+           id.getFiber ());
+
 
    return;
 }
 /* ---------------------------------------------------------------------- */
+#endif

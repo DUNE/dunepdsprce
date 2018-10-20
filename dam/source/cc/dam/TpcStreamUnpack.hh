@@ -43,7 +43,20 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.20 jjr Replaced getTimestamps(Untrimmed) with getRange(Untrimmed)
+                  This method adds the number of ticks in the trimmed/
+                  untrimmed ranges in addition to their timestamps
+
+   2018.09.11 jjr Add 
+                   isTpcNormal  ()
+                   isTpcDamaged ()
+                   getDataFormatType ()
+
+   2018.08.30 jjr Added getTimestamps(Untrimmed) to get the begin, trigger
+                  and end timestamps of this TpcStream 
+
    2018.07.26 jjr Changed ADC type to int16_t
+
    2017.10.04 jjr Changed the vector signatures from std::vector<uint16_t>
                   to TpcAdcVector.  This is still a std::vector, but 
                   allocates memory on cache line boundaries.
@@ -102,27 +115,101 @@ class TpcStreamUnpack
 
    typedef uint64_t timestamp_t;
 
+
    void print(); 
+
+   // Query record type
+   bool isTpcNormal  () const;
+   bool isTpcDamaged () const;
+
+
+   /* ------------------------------------------------------------------ *//*!
+
+      \brief Enumerates the format of the stored data
+                                                                         */
+   /* ------------------------------------------------------------------ */
+   enum class DataFormatType
+   {
+      Unknown    = -1, /*!< Unknown, a corruption or new type has been
+                            introduced without this software being
+                            updated                                      */
+      Mixed      =  0, /*!< There are packets of mixed types             */
+      WibFrame   =  1, /*!< All packets contain raw WIB frames           */
+      Compressed =  2  /*!< All packets contain compressed data          */
+   }; 
+
+   // Query data storage method
+   DataFormatType getDataFormatType  () const;
+
 
    // Number of channels serviced by this fragment
    size_t getNChannels() const;
 
-   // Trimmed number of time samples
-   size_t getNTicks   () const;
 
-   // Untrimmed number of time samples in a stream
-   size_t getNTicksUntrimmed () const;
+   //  The methods below give access to information about the timestamps
+   //  and number of ticks in
+   //     1. The event window
+   //        These are the timestamps and number of ticks that defined
+   //        the event. e.g. for a 3msecs window, the timespan will be
+   //        be 3 msecs and the number of ticks will be 6000.
+   //
+   //    2.  The untrimmed data
+   //        These are the actual timestamps for the beginning and ending
+   //        samples and the actual number of ticks in the untrimmed data.
+   //        Due to the possible dropped frames the number of ticks may 
+   //        not correspond to the time span.
+   //
+   //    3.  The trimmed data
+   //        These are the actual timestamps for the beginning and ending
+   //        samples and the actula number of ticks in the trimmed data.
+   //        Due to the possible dropped frames the number of ticks may 
+   //        not correspond to the time span.
+   //
+   //  While there are calls to get the number of ticks and beginning 
+   //  timestamps these should be considered obsolete. Getting some of
+   //  these values is computationally expensive, making getting all the
+   //  information at once cheaper.
 
-   // Timestamp of beginning of the trimmed waveform
-   timestamp_t getTimeStamp () const; 
 
-   // timestmap of the beginning of the untrimmed event.
-   timestamp_t getTimeStampUntrimmed () const; 
+   // The event window timestamps, returns the # of ticks in the window
+   // These values are defined by the pre and post trigger sample counts
+   // relative to the actual trigger time.  As such, they may not lie 
+   // exactly on a WIB frame timestamp which are quantized to 25 ticks,
+   // or .5 usecs.
+   size_t      getNTicksWindow     () const;
+   timestamp_t getTimeStampWindow  () const;
+   uint32_t    getRangeWindow      (size_t       *nticks,
+                                    timestamp_t   *begin,
+                                    timestamp_t *trigger,
+                                    timestamp_t     *end) const;
+
+   // The untrimmed data timestamps, returns the actual # of untrimmed samples
+   // The return value defines how many samples the getMultiChannelDataUntrimmed
+   // methods will unpack and, in the case of the pseudo 2D array method
+   // the number of elements in the channel dimension
+   size_t      getNTicksUntrimmed     () const;
+   timestamp_t getTimeStampUntrimmed  () const; 
+   uint32_t    getRangeUntrimmed (size_t       *nticks, 
+                                  timestamp_t   *begin, 
+                                  timestamp_t     *end) const;
+
+
+   // The trimmed data timestamps, returns the actual # of trimmed samples
+   // The return value defines how many samples the getMultiChannelData
+   // methods will unpack and, in the case of the pseudo 2D array method
+   // the number of elements in the channel dimension
+   size_t      getNTicks     () const;
+   timestamp_t getTimeStamp  () const; 
+   uint32_t    getRange      (size_t       *nticks,
+                              timestamp_t   *begin,
+                              timestamp_t     *end) const;
 
    // true if stream has a capture error on any tick
+   // Not implemented
    bool hasCaptureError () const; 
 
    // true if stream has any checksum error
+   // Not implemented
    bool hasChecksumError() const; 
 
 

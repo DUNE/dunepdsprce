@@ -78,6 +78,15 @@ static inline void expandAdcs16x4_kernel  (int16_t        *dst,
 // ------------------------------
 // TRANSPOSERS: Contigious Memory
 // ------------------------------
+static inline void transposeAdcs128xN_kernel (int16_t              *dst,
+                                              int            ndstStride,
+                                              WibFrame const    *frames,
+                                              int               nframes) __attribute__ ((always_inline));
+
+static inline void transposeAdcs16x8_kernel  (int16_t        *dst, 
+                                              int          offset, 
+                                              uint64_t const *src) __attribute__ ((always_inline));
+
 static inline void transposeAdcs16x8_kernel  (int16_t        *dst, 
                                               int          offset, 
                                               uint64_t const *src) __attribute__ ((always_inline));
@@ -100,6 +109,10 @@ static inline void transposeAdcs16x32_kernel (int16_t        *dst,
 // --------------------------------------
 // TRANSPOSERS: Channel-by-Channel Memory
 // --------------------------------------
+static inline void transposeAdcs128xN_kernel (int16_t *const       *dst,
+                                              WibFrame const    *frames,
+                                              int               nframes) __attribute__ ((always_inline));
+
 static inline void transposeAdcs16x8_kernel  (int16_t  *const *dst, 
                                               int           offset, 
                                               uint64_t const  *src) __attribute__ ((always_inline));
@@ -164,7 +177,7 @@ void  WibFrame::expandAdcs128xN (int16_t           *dst,
 /* ---------------------------------------------------------------------- *//*!
 
    \brief Transposes the 128 ADC channels serviced by a WibFrame for
-          \a nframes time samples.  nframes must be a multiple of 8.
+          \a nframes time samples.
 
    \param[in]       dst[out]  Array of pointers to the channel-by-channel
                               destination arrays 
@@ -193,6 +206,17 @@ void WibFrame::transposeAdcs128xN  (int16_t              *dst,
       frames  += n32;
       transposeAdcs128x8N (dst, ndstStride, frames, mframes);
    }
+
+
+   // Get any remaining frames (this must be less than 8) 
+   int rframes = mframes & 0x7;
+   if (rframes)
+   {
+      dst    += mframes - rframes;
+      frames += mframes - rframes;
+      transposeAdcs128xN_kernel (dst, ndstStride, frames, rframes);
+   }
+   
 
    return;
 }
@@ -520,6 +544,17 @@ void WibFrame::transposeAdcs128xN  (int16_t  *const  dst[128],
       transposeAdcs128x8N (dst, offset, frames, mframes);
    }
 
+
+   // Get any remaining frames (this must be less than 8) 
+   int rframes = mframes & 0x7;
+   if (rframes)
+   {
+      dst    += mframes - rframes;
+      frames += mframes - rframes;
+      transposeAdcs128xN_kernel (dst, frames, rframes);
+   }
+
+
    return;
 }
 /* ---------------------------------------------------------------------- */
@@ -803,6 +838,7 @@ void WibFrame::transposeAdcs128x32N (int16_t  *const  dst[128],
 #include "WibFrame-gen.hh"
 #endif
 
+#include <string.h>
 
 /* ---------------------------------------------------------------------- *//*!
 
@@ -821,6 +857,78 @@ void WibColdData::expandAdcs64x1 (int16_t              *dst,
 }
 /* ---------------------------------------------------------------------- */
 
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+   \brief Transposes the 128 ADC channels serviced by a WibFrame for
+          \a nframes time samples.
+
+
+   \param[in]       dst[out]  The output destination array. 
+   \param[in] ndstStride[in]  The number of entries of each of the 128
+                              arrays of transposed ADC values.
+   \param[in]     frames[in]  The array of WibFrames
+   \param[in]    nframes[in]  The number frames, \e i.e. time samples
+                              to transpose. 
+
+   This output array should be thought of as a 2d array dst[128][ndstStride].
+   This allows each channel space for ndstStride contigous transposed
+   ADC values.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+static void transposeAdcs128xN_kernel (int16_t              *dst,
+                                       int            ndstStride,
+                                       WibFrame const    *frames,
+                                       int               nframes)
+{
+   //puts ("transposeAcs128xXN_kernel);
+
+
+   // ---------------------------------
+   // Initialize the expander registers
+   // ---------------------------------
+   expandAdcs16_init_kernel ();
+
+
+   for (int iframe = 0; iframe < nframes;  iframe++)
+   {
+      // ----------------------------------
+      // Locate the cold data in this frame
+      // ----------------------------------
+      WibColdData const (& coldData)[2] = frames[iframe].getColdData ();
+
+
+      // ------------------------------------------------
+      // Locate the packed data for each cold data stream
+      // ------------------------------------------------
+      uint64_t const *src0 = coldData[0].locateAdcs12b ();
+      uint64_t const *src1 = coldData[1].locateAdcs12b ();
+
+
+      // ------------------------------
+      // Decode into a local Adc buffer
+      // ------------------------------ 
+      int16_t                adcBuf[128];
+      expandAdcs64x1_kernel (adcBuf+ 0, src0);
+      expandAdcs64x1_kernel (adcBuf+64, src1);
+
+
+      // ---------------------------------------------------------------
+      // Copy the decoded channel ordered Adcs into sample ordered array
+      // ---------------------------------------------------------------
+      for (int idx = 0; idx < 128; idx++)
+      {
+         int chnOffset           = idx * ndstStride;
+         dst[chnOffset + iframe] = adcBuf[idx];
+      }
+   } 
+   
+
+   return;
+}
+/* ---------------------------------------------------------------------- */
 
 
 
@@ -884,6 +992,75 @@ static inline void transposeAdcs16x32_kernel (int16_t        *dst,
 /* BEGIN: CHANNEL-BY-CHANNEL TRANSPOSITION                                */
 /* ---------------------------------------------------------------------- *//*!
 
+   \brief Transposes the 128 ADC channels serviced by a WibFrame for
+          \a nframes time samples.
+
+
+   \param[in]       dst[out]  The output destination array. 
+   \param[in] ndstStride[in]  The number of entries of each of the 128
+                              arrays of transposed ADC values.
+   \param[in]     frames[in]  The array of WibFrames
+   \param[in]    nframes[in]  The number frames, \e i.e. time samples
+                              to transpose. 
+
+   This output array should be thought of as a 2d array dst[128][ndstStride].
+   This allows each channel space for ndstStride contigous transposed
+   ADC values.
+                                                                          */
+/* ---------------------------------------------------------------------- */
+static void transposeAdcs128xN_kernel (int16_t *const       *dst,
+                                       WibFrame const    *frames,
+                                       int               nframes)
+{
+   //puts ("transposeAcs128xXN);
+
+
+   // ---------------------------------
+   // Initialize the expander registers
+   // ---------------------------------
+   expandAdcs16_init_kernel ();
+
+
+   for (int iframe = 0; iframe < nframes;  iframe++)
+   {
+      // ----------------------------------
+      // Locate the cold data in this frame
+      // ----------------------------------
+      WibColdData const (& coldData)[2] = frames[iframe].getColdData ();
+
+
+      // ------------------------------------------------
+      // Locate the packed data for each cold data stream
+      // ------------------------------------------------
+      uint64_t const *src0 = coldData[0].locateAdcs12b ();
+      uint64_t const *src1 = coldData[1].locateAdcs12b ();
+
+
+      // -----------------------------
+      // Decode into a local Adc buffer
+      // ----------------------------- 
+      int16_t                adcBuf[128];
+      expandAdcs64x1_kernel (adcBuf+ 0, src0);
+      expandAdcs64x1_kernel (adcBuf+64, src1);
+
+
+      // ---------------------------------------------------------------
+      // Copy the decoded channel ordered Adcs into sample ordered array
+      // ---------------------------------------------------------------
+      for (int idx = 0; idx < 128; idx++)
+      {
+         dst[idx][iframe] = adcBuf[idx];
+      }
+   } 
+   
+
+   return;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
   \brief  Transpose 8N time samples for 16 channels
 
   \param[out]   dst Pointers to 16 arrays to receive the transposed data

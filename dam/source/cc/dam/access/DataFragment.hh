@@ -29,6 +29,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.08.30 jjr Added isTpcEmpty   method
    2018.03.23 jjr Added isTpcDamaged method
    2017.08.29 jjr Created
   
@@ -84,6 +85,7 @@ public:
    uint32_t                                getN64        () const;
    bool                                    isTpcNormal   () const;
    bool                                    isTpcDamaged  () const;
+   bool                                    isTpcEmpty    () const;
 
 
    // ------------------------------------------------------------

@@ -54,6 +54,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.08.30 jjr Added isTpcEmpty   method
    2018.03.23 jjr Added isTpcDamaged method
    2017.10.07 jjr Created.  This is for methods that, for performance 
                   reasons are inlined for internal use and made external
@@ -112,6 +113,27 @@ DATAFRAGMENT_IMPL bool DataFragment::isTpcDamaged () const
    auto dfHeader     = getHeader ();
    bool isTpcDamaged = dfHeader->isTpcDamaged ();
    return isTpcDamaged;
+}
+/* ---------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Test if this DataFragment is a TpcEmpty \i.e. there are no TPC
+          streams
+
+  \retval true,   if this DataFragment is an empty TPC fragment
+  \retval false,  if this DataFragment is not an empty TPC fragment
+                                                                          */
+/* ---------------------------------------------------------------------- */
+DATAFRAGMENT_IMPL bool DataFragment::isTpcEmpty () const
+{
+   auto dfHeader   = getHeader ();
+   auto dfData     = reinterpret_cast<void const *>(getData   ());
+   auto dfTrailer  = reinterpret_cast<void const *>(getTrailer());
+
+   bool isTpcEmpty = (dfData == dfTrailer) || dfHeader->isTpcEmpty ();
+   return isTpcEmpty;
 }
 /* ---------------------------------------------------------------------- */
 

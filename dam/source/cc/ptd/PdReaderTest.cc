@@ -26,6 +26,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.08.30 jjr Added check for TpcEmpty
    2017.12.19 jjr Removed error message that checked to timestamp 
                   mismatches on the first WIB frame. There is no prediction
                   on the first frame, so there was an extraneous message.
@@ -52,6 +53,9 @@
 
 
 #include "Reader.hh"
+#include "TpcWindow.hh"
+#include "dam/TpcStreamAssessor.hh"
+#include "dam/RceFragmentUnpack.hh"
 #include "dam/HeaderFragmentUnpack.hh"
 #include "dam/DataFragmentUnpack.hh"
 #include "dam/TpcFragmentUnpack.hh"
@@ -75,9 +79,37 @@ class Prms
 {
 public:
    Prms (int argc, char *const argv[]);
+   void  report ();
+
+   class Process 
+   {
+   public:
+      Process () { return; }
+
+   public:
+      enum Options
+      {
+         OPT_M_HILVLPRC  = (1 << 0),  /*!< Process using hi level         */
+         OPT_M_LOLVLPRC  = (1 << 1),  /*!< Process using hi level         */
+         OPT_M_WIBHDR    = (1 << 2),  /*!< Print header information       */
+         OPT_M_WIBERRORS = (1 << 3),  /*!< Print the wib error records    */
+         OPT_M_WIBCHNDMP = (1 << 4),  /*!< Dump adcs as channels          */
+         OPT_M_WIBTIMDMP = (1 << 5),  /*!< Dump adcs in time order        */
+         OPT_M_WIBFRMDMP = (1 << 6)   /*!< Dump WIB frames                */
+      };
+
+   public:
+      uint32_t m_options;
+   };
 
 public:
-   char const *m_ofilename;   /*!< Output file name                       */
+   char *const         *m_filenames;  /*!< Input file name                */
+   enum Reader::FileType m_filetype;  /*!< The input file type            */
+   int                     m_nfiles;  /*!< The number of files            */
+   unsigned int          m_nprocess;  /*!< Number of records to process   */
+   unsigned int             m_nskip;  /*!< Number of records to skip      */
+   Process                m_process;  /*!< Process ooptions               */
+   bool                     m_quiet;  /*!< Quiet mode                     */
 };
 /* ---------------------------------------------------------------------- */
 
@@ -93,28 +125,146 @@ public:
 /* ---------------------------------------------------------------------- */
 Prms::Prms (int argc, char *const argv[])
 {
-   m_ofilename = argv[1];
+   uint32_t options = 0;
+
+   m_filetype  = Reader::FileType::Binary;
+   m_nprocess  = 0xffffffff;
+   m_nskip     = 0;
+   m_quiet     = false;
+   int c;
+   while ( (c = getopt (argc, argv, "qbgn:s:d:")) != -1 )
+   {
+      if      (c == 'b') m_filetype = Reader::FileType::Binary;
+      else if (c == 'g') m_filetype = Reader::FileType::TextGdb64;
+      else if (c == 'n') m_nprocess = strtoul (optarg, NULL, 0);
+      else if (c == 's') m_nskip    = strtoul (optarg, NULL, 0);
+      else if (c == 'q') m_quiet    = true;
+      else if (c == 'd')
+      {
+         if (strchr (optarg, 'e')) options   |= Process::OPT_M_WIBERRORS;
+         if (strchr (optarg, 'h')) options   |= Process::OPT_M_HILVLPRC;
+         if (strchr (optarg, 'w')) options   |= Process::OPT_M_WIBHDR;
+         if (strchr (optarg, 'c')) options   |= Process::OPT_M_WIBCHNDMP;
+         if (strchr (optarg, 't')) options   |= Process::OPT_M_WIBTIMDMP;
+         if (strchr (optarg, 'f')) options   |= Process::OPT_M_WIBFRMDMP;
+      }
+   }
+   
+   if (optind < argc)
+   {
+      m_filenames = &argv[optind];
+      m_nfiles    = argc - optind;
+   }
+   else
+   {
+      fprintf (stderr, "Error: no file specified\n");
+      exit (-1);
+   }
+
+   m_process.m_options = options;
+
+   return;
+}
+/* ---------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Reports the parameters being used
+                                                                          */
+/* ---------------------------------------------------------------------- */
+void Prms::report ()
+{
+   static const char Separator[] =
+"----------------------------------------------------------------------------";
+
+   if (m_quiet) 
+   {
+      return;
+   }
+   
+   putchar ('\n');
+   puts (Separator);
+
+   char const *typeName = 
+        (m_filetype == Reader::FileType::  Binary)  ? "Binary"
+      : (m_filetype == Reader::FileType::TextGdb64) ? "Gdb dump"
+      : "Unknown";
+
+   printf ("File      : %s (%s)\n", m_filenames[0], typeName);
+
+   if (m_nprocess == 0xffffffff) printf ("Processing: all\n");
+   else                          printf ("Processing: %u\n",
+                                            m_nprocess);
+
+   if (m_nskip   ==           0) printf ("Skipping  : none\n");
+   else                          printf ("Skipping  : %u\n",
+                                         m_nskip);
+   puts (Separator);
+   putchar ('\n');
+   return;
 }
 /* ---------------------------------------------------------------------- */
 
 
 
-static void processFragment  (uint64_t        const *buf);
-static void process          (TpcStreamUnpack const *tpc);
 
-static void processRaw       (TpcStreamUnpack const *tpc);
+
+static int  processFile      (Prms const               &prms,
+                              char const           *filename,
+                              enum Reader::FileType filetype);
+
+static void processFragment  (Prms::Process const  &prms, 
+                              uint64_t        const *buf);
+static void process          (Prms::Process const  &prms, 
+                              TpcStreamUnpack const *tpc);
+static void processRaw       (Prms::Process const  &prms, 
+                              TpcStreamUnpack const *tpc);
+static void dumper           (int16_t const *adcs,
+                              int          nticks,
+                              uint64_t   times[3],
+                              int         begChan,
+                              int         endChan,
+                              int         begTick,
+                              int         endTick);
+
 
 /* ---------------------------------------------------------------------- */
 int main (int argc, char *const argv[])
 {
-   static size_t const MaxBuf = 10 * 1024 * 1024;
+
 
    // -----------------------------------
    // Extract the command line parameters
    // -----------------------------------
-   Prms     prms (argc, argv);
-   Reader reader (prms.m_ofilename);
+   Prms prms (argc, argv);
+   prms.report ();
 
+   for (int ifile = 0; ifile < prms.m_nfiles; ifile++)
+   {
+      processFile (prms,
+                   prms.m_filenames[ifile],
+                   prms.m_filetype);
+   }
+
+   return 0;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
+/* ---------------------------------------------------------------------- *//*!
+
+                                                                          */
+/* ---------------------------------------------------------------------- */  
+static int processFile (Prms const               &prms,
+                        char const           *filename,
+                        enum Reader::FileType filetype)
+{
+   static size_t const MaxBuf = 10 * 1024 * 1024;
+
+   Reader &reader = ReaderCreate (filename, 
+                                  filetype);
 
    // -----------------------------------
    // Open the file to process
@@ -136,7 +286,9 @@ int main (int argc, char *const argv[])
    uint64_t *buf    = reinterpret_cast<decltype(buf)>(bufint);
 #endif
 
-   while (1)
+   unsigned total = prms.m_nprocess;
+   if (total != 0xffffffff) total += prms.m_nskip;
+   for (unsigned idx = 0; idx < total; idx++)
    {
       HeaderFragmentUnpack *header = HeaderFragmentUnpack::assign (buf);
       ssize_t               nbytes = reader.read (header);
@@ -145,7 +297,6 @@ int main (int argc, char *const argv[])
       {
          if (nbytes == 0) 
          {
-            reader.close ();
             break;
          }
 
@@ -155,19 +306,41 @@ int main (int argc, char *const argv[])
          }
       }
 
+      // Check that this looks like a fragment header
+      bool isHeader = header->isOkay ();
+      if (!isHeader)
+      {
+         fprintf (stderr, 
+         "Error: %16.16" PRIx64 " is not a legitmate fragment header\n",
+                  buf[0]);
+      }
+
+
+
       // ----------------------------------------------------
       // Get the number of 64-bit words in this data fragment
       // and read the body of the data fragment.
       // ----------------------------------------------------
-      uint64_t n64 = header->getN64 ();
+      uint64_t  n64 = header->getN64 ();
       ssize_t nread = reader.read (buf, n64, nbytes);
       if (nread <= 0)
       {
-         printf ("Error: Incomplete or corrupted record\n");
+         fprintf (stderr, 
+                  "Error: Incomplete or corrupted record\n");
          break;
       }
 
-      processFragment (buf);
+      if (idx < prms.m_nskip) continue;
+
+      bool isOkay = RceFragmentUnpack::isOkay (buf, nread+sizeof(header));
+      if (!isOkay)
+      {
+         fprintf (stderr,
+         "Error: Fragment header is inconsistent with length and trailer\n");
+      }
+
+
+      processFragment (prms.m_process, buf);
    }
 
 
@@ -187,13 +360,13 @@ int main (int argc, char *const argv[])
   \param[in] buf The data fragment to process
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void processFragment (uint64_t const *buf)
+static void processFragment (Prms::Process const   &prms, 
+                             uint64_t const         *buf)
 {
    // -----------------------------------------------
    // Interpret this as a generic RCE Fragment Header
    // -----------------------------------------------
    HeaderFragmentUnpack const header (buf);
-
 
    // ----------------------------
    // Is this an RCE Data Fragment
@@ -210,7 +383,7 @@ static void processFragment (uint64_t const *buf)
       // ----------------------------------------------
       // Is this record an error-free TPC data fragment
       // ---------------------------------------------
-      if (df.isTpcNormal () || df.isTpcDamaged ())
+      if (df.isTpcNormal () || df.isTpcDamaged () || df.isTpcEmpty ())
       {
          char const *tpcType = df.isTpcNormal  () ? "TpcNormal"
                              : df.isTpcDamaged () ? "TpcDamaged"
@@ -235,14 +408,17 @@ static void processFragment (uint64_t const *buf)
          {
             TpcStreamUnpack const *tpcStream = tpcFragment.getStream (istream);
 
-            printf ("\nTpcStream: %d/%d  -- using high level access methods\n", 
-                    istream, nstreams);
-            process    (tpcStream);
+            if (prms.m_options & Prms::Process::OPT_M_HILVLPRC)
+            {
+               printf ("\nTpcStream: %d/%d  -- using high level access methods\n", 
+                       istream, nstreams);
+               process    (prms, tpcStream);
+            }
 
 
             printf ("\nTpcStream: %d/%d -- using low  level access methods\n",
                     istream, nstreams);
-            processRaw (tpcStream);
+            processRaw (prms, tpcStream);
          }
       }
       else if (df.isTpcDamaged ())
@@ -269,16 +445,61 @@ static void processFragment (uint64_t const *buf)
             // Only proccess with low level methods
             printf ("\nTpcStream: %d/%d -- using low  level access methods\n",
                     istream, nstreams);
-            processRaw (tpcStream);
+            processRaw (prms, tpcStream);
          }
-
-
       }
+      else if (df.isTpcEmpty ())
+      {
+         printf ("TpcStream is empty\n");
+      }
+
       
       df.printTrailer ();
    }
 }
 /* ---------------------------------------------------------------------- */
+
+
+
+
+/* ---------------------------------------------------------------------- */
+static void announceTpcStream (TpcStreamUnpack const *tpcStream)
+{
+   // ----------------------------------
+   // Get the identifier for this stream 
+   // This is the WIB's Crate.Slot.Fiber
+   // ----------------------------------
+   TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
+   int                  nchannels = tpcStream->getNChannels  ();
+   uint32_t                status = tpcStream->getStatus     ();
+   
+   char const *recName = tpcStream->isTpcNormal  () ? "Normal"
+                       : tpcStream->isTpcDamaged () ? "Damaged"
+                       : "Unknown";
+
+   TpcStreamUnpack::DataFormatType fmtType = tpcStream->getDataFormatType ();
+   char const *fmtName = 
+     fmtType == TpcStreamUnpack::DataFormatType::WibFrame   ? "WibFrames"
+   : fmtType == TpcStreamUnpack::DataFormatType::Compressed ? "Compressed"
+   : fmtType == TpcStreamUnpack::DataFormatType::Mixed      ? "Mixed"
+   : "Unknown";
+   
+   printf ("TpcStream:%s:%s WibId:0x%2x.%1x.%1x  # channels = %4d "
+           "status = %8.8" PRIx32 "\n",
+           recName,
+           fmtName,
+           id.getCrate (),
+           id.getSlot  (),
+           id.getFiber (),
+           nchannels,
+           status);
+
+   return;
+}
+/* ---------------------------------------------------------------------- */
+
+
+
 
 
 
@@ -289,38 +510,37 @@ static void processFragment (uint64_t const *buf)
   \param[in]  tpcStream  The target TPC stream.
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void process (TpcStreamUnpack const *tpcStream)
+static void process (Prms::Process const        &prms, 
+                     TpcStreamUnpack const *tpcStream)
 {
-   // ----------------------------------
-   // Get the identifier for this stream 
-   // This is the WIB's Crate.Slot.Fiber
-   // ----------------------------------
-   TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
-   int                  nchannels = tpcStream->getNChannels  ();
-   uint32_t                status = tpcStream->getStatus     ();
-   printf ("TpcStream: 0x%2x.%1x.%1x  # channels = %4d status = %8.8" PRIx32 "\n",
-           id.getCrate (),
-           id.getSlot  (),
-           id.getFiber (),
-           nchannels,
-           status);
 
 
+   int nchannels = tpcStream->getNChannels  ();
+
+   TpcWindow::Window<TpcWindow::Type::Untrimmed> untrimmed (tpcStream);
+   TpcWindow::Window<TpcWindow::Type::Trimmed>     trimmed (tpcStream);
 
    // ----------------------------------------------------------
    // For both the trimmed and untrimmed data, get the number of
    // the number of timesamples and their starting time.
    // ----------------------------------------------------------
-   int       trimmedNticks = tpcStream->getNTicks             ();
-   int     untrimmedNticks = tpcStream->getNTicksUntrimmed    ();
-   auto untrimmedTimestamp = tpcStream->getTimeStampUntrimmed ();
-   auto   trimmedTimestamp = tpcStream->getTimeStamp          ();
-   printf (" Untrimmed: %6u  %8.8" PRIx64 "\n"
-           "   trimmed: %6u  %8.8" PRIx64 "\n",
-           untrimmedNticks, untrimmedTimestamp,
-             trimmedNticks,   trimmedTimestamp);
+   if (prms.m_options & Prms::Process::OPT_M_WIBHDR)
+   {
+      announceTpcStream (tpcStream);
+      untrimmed.print ();
+      trimmed  .print ();
+   }
 
+   /*
+     TpcStreamUnpack::DamageReport report ();
 
+     
+
+   if (stream->isTpcDamaged ())
+   {
+      stream->getTpcDamageReport (&report);
+   }
+   */
 
    // -------------------------------------------------------
    // Get the data accessed as adcs[nchannels][trimmedNTicks]
@@ -328,37 +548,31 @@ static void process (TpcStreamUnpack const *tpcStream)
    // packed 12-bit ADCs to 16-bits and transposing the time
    // and channel order.
    // -------------------------------------------------------
-   int     adcCnt = nchannels * trimmedNticks;
+   int     adcCnt = nchannels * trimmed.m_nticks;
    int  adcNBytes = adcCnt    * sizeof (int16_t);
    int16_t  *adcs = reinterpret_cast <decltype (adcs)>(malloc (adcNBytes));
 
-   //printf ("Transposing data: allocated %u bytes @ %p\n", 
-   //        adcNBytes, (void *)adcs);
 
-   tpcStream->getMultiChannelData (adcs);
+   bool okay = tpcStream->getMultiChannelData (adcs);
 
-
-   #if 0
-   // ----------------------------------
-   // Just dumping a portion of the data
-   // ----------------------------------
-   int adcsPerChannel = trimmedNticks;
-   for (int ichan = 0; ichan < nchannels; ++ichan)
+   if (!okay) 
    {
-      for (int itick = 0; itick < 32; itick += 8)
-      {
-         printf (
-            " %2.2x.%4.4x: %p"
-            " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 ""
-            " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 " %4.4" PRIx16 "\n",
-            ichan, itick, (void *)(adcs+itick),
-            adcs[itick + 0], adcs[itick + 1], adcs[itick + 2], adcs[itick + 3],
-            adcs[itick + 4], adcs[itick + 5], adcs[itick + 6], adcs[itick + 7]);
-      }
-
-      adcs += adcsPerChannel;
+      free (adcs);
+      return;
    }
-   #endif
+
+
+   int begChan = 0;
+   int endChan = 4;
+   int begTick = 0;
+   int endTick = 128;
+   dumper (adcs,
+           trimmed.m_nticks,
+           trimmed.m_times,
+           begChan,
+           endChan,
+           begTick,
+           endTick);
 
 
    // ===================================================================
@@ -367,8 +581,6 @@ static void process (TpcStreamUnpack const *tpcStream)
    // of this unpacking
    //
    // ===================================================================
-
-
    free (adcs);
    return;
 }
@@ -376,6 +588,47 @@ static void process (TpcStreamUnpack const *tpcStream)
 
 
 
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief Dumps a specified range of iticks/channels
+                                                                          */
+/* ---------------------------------------------------------------------- */
+static void dumper (int16_t const *adcs,
+                    int          nticks,
+                    uint64_t   times[3],
+                    int         begChan,
+                    int         endChan,
+                    int         begTick,
+                    int         endTick)
+{
+   int adcsPerChannel = nticks;
+   TpcStreamUnpack::timestamp_t    ts = times[0];
+   TpcStreamUnpack::timestamp_t tsTrg = times[1];
+   int                        trgTick = (tsTrg - ts) / 25;
+
+   for (int ichan = begChan; ichan < endChan; ++ichan)
+   {
+      printf (" %2.2x.%16.16" PRIx64 "\n", ichan, ts);
+
+      for (int itick = begTick; itick < endTick; itick++)
+      {
+
+         if ( (itick & 0xf) ==    0) printf (" %4x", itick);
+         if (itick != trgTick)       printf (" %3.3" PRIx16, adcs[itick]);
+         else                        printf ("*%3.3" PRIx16, adcs[itick]); 
+         if  ( (itick & 0xf) == 0xf) putchar ('\n');
+      }
+
+      if (nticks & 0xf) putchar ('\n');
+   
+
+      adcs += adcsPerChannel;
+   }
+
+   return;
+}
+/* ---------------------------------------------------------------------- */
 
 
 /* ---------------------------------------------------------------------- *\
@@ -392,16 +645,17 @@ static void process (TpcStreamUnpack const *tpcStream)
 #include "dam/access/TpcPacket.hh"
 
 static unsigned int
-        processWibFrames (pdd::access::TpcPacketBody const &pktBdy,
+       processWibFrames  (Prms::Process const &prms,
+                          pdd::access::TpcPacketBody const &pktBdy,
                           unsigned int                     pktType,
                           unsigned int                      pktOff,
                           unsigned int                      pktLen,
                           int                               pktNum,
-                          int                           nWibFrames,
-                          uint64_t                      *predicted);
+                          int                           nWibFrames);
 
 static unsigned int
-       processCompressed (pdd::access::TpcPacketBody const &pktBdy,
+       processCompressed (Prms::Process const                &prms,
+                          pdd::access::TpcPacketBody const &pktBdy,
                           unsigned int                     pktType,
                           unsigned int                      pktOff,
                           unsigned int                      pktLen,
@@ -417,41 +671,44 @@ static unsigned int
   \param[in]  tpcStream  The target TPC stream.
                                                                           */
 /* ---------------------------------------------------------------------- */
-static void processRaw (TpcStreamUnpack const *tpcStream)
+static void processRaw (Prms::Process const        &prms, 
+                        TpcStreamUnpack const *tpcStream)
 {
    using namespace pdd;
    using namespace pdd::access;
-
-   TpcStreamUnpack::Identifier id = tpcStream->getIdentifier ();
-   TpcStream const        &stream = tpcStream->getStream     ();
-   int                  nchannels = tpcStream->getNChannels  ();
-   uint32_t                status = tpcStream->getStatus     ();
-
-   printf ("TpcStream: %1d.%1d.%1d  # channels = %4d status = %8.8" PRIx32 "\n",
-           id.getCrate (),
-           id.getSlot  (),
-           id.getFiber (),
-           nchannels,
-           status);
 
 
    // -----------------------
    // Construct the accessors
    // -----------------------
+   TpcStream const &stream = tpcStream->getStream     ();
    TpcRanges        ranges (stream.getRanges ());
    TpcToc           toc    (stream.getToc    ());
    TpcPacket        pktRec (stream.getPacket ());
    TpcPacketBody    pktBdy (pktRec.getRecord ());
    uint64_t const  *pkts  = pktBdy.getData    ();
 
-   ranges.print ();
-   toc   .print ();
+   if (prms.m_options & Prms::Process::OPT_M_WIBHDR)
+   {
+      announceTpcStream (tpcStream);
+      ranges.print ();
+      toc   .print ();
+   }
    
+
+   if (prms.m_options & Prms::Process::OPT_M_WIBERRORS)
+   {
+      TpcStreamAssessor assessment;
+      assessment.assessTrimmed (tpcStream);
+      assessment.report ();
+      ///assessment.report (TpcStreamAssessor::FLT_M_TIMING);
+      assessment.reset  ();
+   }
+
 
    int   npkts = toc.getNPacketDscs ();
 
-   uint64_t  predicted = 0;
-   unsigned int errCnt = 0;
+   uint64_t predicted  = 0;
    for (int pktNum = 0; pktNum < npkts; ++pktNum)
    {
       TpcTocPacketDsc pktDsc (toc.getPacketDsc (pktNum));
@@ -464,23 +721,20 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
       {
          unsigned nWibFrames = pktDsc.getNWibFrames ();
 
+         /*
          printf ("Packet[%2u:%1u(WibFrames ).%4d] = "
                  " %16.16" PRIx64 " %16.16" PRIx64 " %16.16" PRIx64 "\n",
                  pktNum, pktType, nWibFrames,
                  ptr[0], ptr[1], ptr[2]);
+         */
 
-         errCnt += processWibFrames (pktBdy, 
-                                     pktType,
-                                     pktOff, 
-                                     pktLen,
-                                     pktNum,
-                                     nWibFrames,
-                                     &predicted);
-
-         if (errCnt)
-         {
-            printf ("Error %u\n", errCnt);
-         }
+         processWibFrames (prms,
+                           pktBdy, 
+                           pktType,
+                           pktOff, 
+                           pktLen,
+                           pktNum,
+                           nWibFrames);
       }
       else if (pktDsc.isCompressed ())
       {
@@ -489,19 +743,43 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
                  pktNum, pktType, pktLen,
                  ptr[0], ptr[1], ptr[2]);
 
-         errCnt += processCompressed (pktBdy, 
-                                      pktType,
-                                      pktOff, 
-                                      pktLen,
-                                      pktNum,
-                                      &predicted);
+         processCompressed (prms,
+                            pktBdy, 
+                            pktType,
+                            pktOff, 
+                            pktLen,
+                            pktNum,
+                            &predicted);
       }
    }
+
+
 
    return;
 }
 /* ---------------------------------------------------------------------- */
 
+
+
+static void wibFramesPrint  (pdd::access::WibFrame const *wf,
+                             int                       wfBeg,
+                             int                       wfEnd);
+
+
+/*
+static int  wibFrameAnalyze (WibErrorRecords     &errRecords, 
+                             WibExpected           *expected,
+                             unsigned int             pktNum,
+                             pdd::access::WibFrame const *wf, 
+                             int                       wfBeg,
+                             int                       wfEnd);
+*/
+
+static void     wibChnPrint (pdd::access::WibFrame const *wf, 
+                             int                       wfBeg,
+                             int                       wfEnd,
+                             int                      chnBeg,
+                             int                      chnEnd);
 
 
 
@@ -510,28 +788,29 @@ static void processRaw (TpcStreamUnpack const *tpcStream)
    \brief  Process a packet of WIB frames
    \return Number of errors encountered
 
-   \param[in]     pktBdy The packet of WIB frames to process
-   \param[in]    pktType The packet type (usually WibFrame), but if not
-                         output will be transcoded to WibFrames
-   \param[in]     pktOff The 64-bit offset of start of the WIB frames
-   \param[in]     pktLen The length of the packet in units of 64-bit words
-   \param[in] nWibFrames The number of WIB frames
-   \param[in]  predicted The predicted timestamp
+   \param[in]      pktBdy The packet of WIB frames to process
+   \param[in]     pktType The packet type (usually WibFrame), but if not
+                          output will be transcoded to WibFrames
+   \param[in]      pktOff The 64-bit offset of start of the WIB frames
+   \param[in]      pktLen The length of the packet in units of 64-bit words
+   \param[in]  nWibFrames The number of WIB frames
+   \param[in] predictions The predicted timestamp, convert counts, etc
                                                                           */
 /* ---------------------------------------------------------------------- */
 static unsigned int 
-       processWibFrames (pdd::access::TpcPacketBody const &pktBdy,
+       processWibFrames (Prms::Process const                &prms, 
+                         pdd::access::TpcPacketBody const &pktBdy,
                          unsigned int                     pktType,
                          unsigned int                      pktOff,
                          unsigned int                      pktLen,
                          int                               pktNum,
-                         int                           nWibFrames,
-                         uint64_t                      *predicted)
+                         int                           nWibFrames)
 {
    using namespace pdd;
    using namespace pdd::access;
 
    unsigned int errCnt = 0;
+
 
    // -----------------------------------------------------------------
    // Locate the WibFrames
@@ -540,9 +819,38 @@ static unsigned int
    // -----------------------------------------------------------------
    WibFrame const *wf = pktBdy.getWibFrames (pktType, pktOff);
 
-   uint64_t expTimestamp = *predicted;
 
-   for (int iwf = 0; iwf < nWibFrames; ++iwf)
+   int wfBeg = 0;
+   int wfEnd = nWibFrames;
+   
+   if (prms.m_options & Prms::Process::OPT_M_WIBFRMDMP)
+   {
+      wibFramesPrint (wf, wfBeg, wfEnd);
+   }
+
+
+
+
+
+   if (prms.m_options & Prms::Process::OPT_M_WIBCHNDMP)
+   {
+      int chnBeg = 0;
+      int chnEnd = 0;
+      wibChnPrint (wf, wfBeg, wfEnd, chnBeg, chnEnd);
+   }
+
+   return errCnt;
+}
+
+static void wibFramesPrint (pdd::access::WibFrame const *wf, 
+                            int                       wfBeg,
+                            int                       wfEnd)
+{
+   using namespace pdd;
+   using namespace pdd::access;
+
+
+   for (int iwf = wfBeg; iwf < wfEnd; ++wf, ++iwf)
    {
       auto hdr       = wf->getHeader ();
       auto commaChar = wf->getCommaChar (hdr);
@@ -554,42 +862,27 @@ static unsigned int
       auto reserved  = wf->getReserved  (hdr);
       auto wiberrors = wf->getWibErrors (hdr);
       auto timestamp = wf->getTimestamp ();
-
-      if (timestamp != expTimestamp && (expTimestamp != 0))
-      {
-         errCnt += 1;
-         printf ("Error %2d.%3d @ %4d %16.16" PRIx64 " != %16.16" PRIx64 "\n", 
-                 errCnt, pktNum, iwf, timestamp, expTimestamp);
-      }
-
-      expTimestamp = timestamp + 25;
-
+   
       // ----------------------------------------------------------
       // The const & are necessary to make sure this is a reference
       // ----------------------------------------------------------
-      auto const &colddata = wf->getColdData ();
-      
+      auto const &colddata = wf->getColdData ();      
       auto cvt0 = colddata[0].getConvertCount ();
       auto cvt1 = colddata[1].getConvertCount ();
-      
-      puts   (
-         "Wf #  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
-         "---- -- -- ------------- ------- -------- ---------------- ---- ----");
-         
-      printf (
-         "%4u: %2.2x %2.2x %2.2x.%1.1x.%1.1x (%3.3x), %6.6x %8.8x %16.16" 
-         PRIx64 " %4.4x %4.4x\n",
-         iwf,
-         commaChar, version,
-         crate, slot, fiber, id,
-         reserved,
-         wiberrors,
-         timestamp,
-         cvt0, cvt1);
-      
-      ++wf;
 
-
+      puts   ("Wf #  CC Ve Cr.S.F ( Id)   Rsvd  WibErrs         TimeStamp Cvt0 Cvt1\n"
+              "---- -- -- ------------- ------- -------- ---------------- ---- ----");
+   
+      printf ("%4u: %2.2x %2.2x %2.2x.%1.1x.%1.1x (%3.3x), %6.6x %8.8x %16.16" 
+              PRIx64 " %4.4x %4.4x\n",
+              iwf,
+              commaChar, version,
+              crate, slot, fiber, id,
+              reserved,
+              wiberrors,
+              timestamp,
+              cvt0, cvt1);
+      
       // ------------------------------------------------------
       // Would rather use sizeof's on colddata, but, while gdb
       // seems to get it right 
@@ -601,30 +894,32 @@ static unsigned int
          auto const   &cd = colddata[icd];
          
          auto hdr0        = cd.getHeader0      ();
-         auto streamErrs  = cd.getStreamErrs   (hdr0);
-         auto reserved0   = cd.getReserved0    (hdr0);
+         auto streamErr1  = cd.getStreamErr1   (hdr0);
+         auto streamErr2  = cd.getStreamErr2   (hdr0);
          auto checkSums   = cd.getCheckSums    (hdr0);
          auto cvtCnt      = cd.getConvertCount (hdr0);
-         
+      
+
          auto hdr1        = cd.getHeader1      ();
          auto errRegister = cd.getErrRegister  (hdr1);
          auto reserved1   = cd.getReserved1    (hdr1);
          auto hdrs        = cd.getHdrs         (hdr1);
-         
+      
          auto const &packedAdcs = cd.locateAdcs12b ();
          
-         puts   ("   iCd SE Rv  ChkSums  Cvt ErRg Rsvd      Hdrs\n"
+
+         int16_t adcs[WibColdData::NAdcs];
+         cd.expandAdcs64x1 (adcs, packedAdcs);
+      
+         puts   ("   iCd E2 E1  ChkSums  Cvt ErRg Rsvd      Hdrs\n"
                  "   --- -- -- -------- ---- ---- ----  --------");
-            
          printf (
             "     %1x %2.2x %2.2x %8.8x %4.4x %4.4x %4.4x  %8.8" PRIx32 "\n",
             icd, 
-            streamErrs,  reserved0, checkSums, cvtCnt,
-            errRegister, reserved1, hdrs);
+            streamErr2,  streamErr1, checkSums, cvtCnt,
+            errRegister,  reserved1, hdrs);
          
-         int16_t adcs[WibColdData::NAdcs];
-         cd.expandAdcs64x1 (adcs, packedAdcs);
-
+      
          for (unsigned iadc = 0; iadc < WibColdData::NAdcs; iadc += 16)
          {
             printf (
@@ -640,15 +935,24 @@ static unsigned int
                adcs[iadc +12], adcs[iadc +13], adcs[iadc +14], adcs[iadc +15]);
          }
       }
-
       putchar ('\n');
-   }      
-
-   *predicted = expTimestamp;
-
-   return errCnt;
+   }
 }
 /* ---------------------------------------------------------------------- */
+
+
+
+
+
+static void   wibChnPrint (pdd::access::WibFrame const *wf, 
+                           int                       wfBeg,
+                           int                       wfEnd,
+                           int                      chnBeg,
+                           int                      chnEnd)
+{
+   printf ("Channel Dump\n");
+   return;
+}
 
 
 #include "dam/access/TpcCompressed.hh"
@@ -667,7 +971,8 @@ static unsigned int
                                                                           */
 /* ---------------------------------------------------------------------- */
 static unsigned int
-       processCompressed (pdd::access::TpcPacketBody const &pktBdy,
+       processCompressed (Prms::Process const                &prms, 
+                          pdd::access::TpcPacketBody const &pktBdy,
                           unsigned int                     pktType,
                           unsigned int                      pktOff,
                           unsigned int                      pktLen,

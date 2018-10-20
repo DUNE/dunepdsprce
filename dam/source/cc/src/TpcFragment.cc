@@ -25,6 +25,10 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.09.13 jjr Added protection in constructor to avoid accessing 
+                  non-existent streams.  Due to an error in rceServer
+                  it sometimes indicates that there are 2 streams when, in
+                  fact, there is only 1.
    2016.10.06 jjr Changed method void Print () -> void print () const
    2017.08.29 jjr Created
   
@@ -54,6 +58,15 @@ namespace access {
 TpcFragment::TpcFragment (DataFragment const &df) :
    m_df (df)
 {
+   // ---------------------------------------
+   // Make sure this is not an empty fragment
+   // ---------------------------------------
+   if (df.isTpcEmpty ()) 
+   {
+      m_nstreams = 0;
+      return;
+   }
+
    pdd::record::Data       const      *data = df.getData ();
    pdd::record::TpcStream  const *rawStream =  
                   reinterpret_cast<decltype (rawStream)>(data);
@@ -66,12 +79,17 @@ TpcFragment::TpcFragment (DataFragment const &df) :
    // Should check that the number of streams 
    // does not exceed the allotted storage.
    // ----------------------------------------
-   int nstreams = hdr->getLeft () + 1;
-   int istream  = 0; 
+   int nstreams                = hdr->getLeft () + 1;
+   int istream                 = 0; 
+   pdd::Trailer const *trailer = df.getTrailer ();
 
-
-   for (int istream = 0; istream < nstreams; ++istream)
+   for (istream = 0; istream < nstreams; ++istream)
    {
+      if (reinterpret_cast<void const *>(rawStream) >= 
+          reinterpret_cast<void const *>(trailer))
+      {
+         break;
+      }
       m_tpcStreams[istream].construct (rawStream);
    
       uint64_t        n64 = data->getN64 ();
@@ -103,7 +121,7 @@ TpcFragment::TpcFragment (DataFragment const &df) :
       // ERRROR
    }
 
-   m_nstreams = nstreams;
+   m_nstreams = istream;
    
 
    return;
