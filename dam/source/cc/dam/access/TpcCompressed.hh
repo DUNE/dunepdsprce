@@ -44,6 +44,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.22 jjr Added getTocTrailer () method to TpcCompressed
    2018.07.11 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -316,10 +317,11 @@ public:
 public:
    void construct (uint64_t const *w64, uint32_t n64);
 
-   pdd::record::TpcCompressedHdr const *getHdr  () const;
-   uint64_t                      const *getData () const;
-   pdd::record::TpcCompressedToc const *getToc  () const;
-   uint32_t                             getN64  () const;
+   pdd::record::TpcCompressedHdr        const *getHdr        () const;
+   uint64_t                             const *getData       () const;
+   pdd::record::TpcCompressedToc        const *getToc        () const;
+   pdd::record::TpcCompressedTocTrailer const *getTocTrailer () const;
+   uint32_t                                    getN64        () const;
 
 
    // Decompression into pseudo 2-D ADC array
@@ -1012,6 +1014,19 @@ inline pdd::record::TpcCompressedToc const *TpcCompressed::getToc () const
 }
 /* ---------------------------------------------------------------------- */
 
+
+/* ---------------------------------------------------------------------- *//*!
+
+  \brief  Return a pointer to the Tpc Compressed Table of Contents Trailer
+  \return A pointer to the Tpc Compressed Table of Contents trailer 
+                                                                          */
+/* ---------------------------------------------------------------------- */
+inline pdd::record::TpcCompressedTocTrailer const 
+                    *TpcCompressed::getTocTrailer () const
+{
+   return m_tocTlr;
+}
+/* ---------------------------------------------------------------------- */
 
 
 /* ---------------------------------------------------------------------- *//*!

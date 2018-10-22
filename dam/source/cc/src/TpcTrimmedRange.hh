@@ -40,11 +40,16 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.22 jjr Corrected getting the correct number of frames for the
+                  trimmed compressed data.  It was incorrectly using 
+                  getNWibFrames, which cleary does not work for compressed
+                  data.
    2018.10.18 jjr Created
 \* ---------------------------------------------------------------------- */
 
 
 #include "TpcStream-Impl.hh"
+#include "TpcCompressed-Impl.hh"
 
 namespace pdd    {
 namespace access {
@@ -190,17 +195,37 @@ inline TpcTrimmedRange::TpcTrimmedRange (pdd::access::TpcStream const &stream)
    // ---------------------------
    // Locate the WibFrame packets
    // ---------------------------
-   TpcToc           toc    (stream.getToc    ());
-   TpcPacket        pktRec (stream.getPacket ());
-   TpcPacketBody    pktBdy (pktRec.getRecord ());
+   TpcToc           toc    (stream.getToc     ());
+   TpcPacket        pktRec (stream.getPacket  ());
+   TpcPacketBody    pktBdy (pktRec.getRecord  ());
    TpcTocPacketDsc  pktDsc (toc.getPacketDsc (0));
-   int            npkts = toc.getNPacketDscs ();
-   int          nframes = pktDsc.getNWibFrames ();
-   int       nTotFrames = npkts * nframes;
+   int             npkts =  toc.getNPacketDscs ();
 
    unsigned int          pktType = pktDsc.getType      ();
    unsigned int         pktOff64 = pktDsc.getOffset64  ();
    WibFrame const            *wf = pktBdy.getWibFrames (pktType, pktOff64);
+
+   int nframes;
+   if (wf)
+   {
+      nframes = pktDsc.getNWibFrames ();
+   }
+   else
+   {
+      // --------------------------------------------------
+      // This cheats by assuming all channels contain the
+      // same number of samples.  While in practice, this
+      // so far has been true, the underlying format allows
+      // different channels to have different samples sizes.
+      // --------------------------------------------------
+      uint32_t      n64 = pktDsc.getLen64    ();
+      TpcCompressed cmp (pktBdy.getData(), n64);
+      auto const    tlr = cmp.getTocTrailer  ();
+      nframes           = TpcCompressedTocTrailer::getNSamples   (tlr);
+   }
+
+
+   int       nTotFrames = npkts * nframes;
 
 
    // --------------------------------------------------------
@@ -400,7 +425,7 @@ inline uint32_t TpcTrimmedRange::Location::
                   idx  -= 1;
                   wibTs = wf[idx].getTimestamp ();
                }
-               printf ("Found at %d:%4x\n", pktNum, idx);
+
                m_wibOff = idx;
                m_pktNum = idx / nframesPerPkt;
                m_pktOff = idx % nframesPerPkt;

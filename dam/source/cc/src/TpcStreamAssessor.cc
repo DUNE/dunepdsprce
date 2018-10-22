@@ -39,6 +39,7 @@
   
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.22 jjr Corrected printf formatting matching errors.
    2018.10.10 jjr Created
   
 \* ---------------------------------------------------------------------- */
@@ -404,7 +405,7 @@ void TpcStreamAssessor::report (Error_t filter) const
       bm = TpcStreamAssessor::Record::ERR_M_WIB_RSVD;
       if (errs & bm)
       {
-         printf (" %4" PRIx16, rec->m_wibrsvd);
+         printf (" %4" PRIx32, rec->m_wibrsvd);
          errs &= ~bm;
       }
       else
@@ -429,7 +430,7 @@ void TpcStreamAssessor::report (Error_t filter) const
          uint32_t bm = TpcStreamAssessor::Record::ERR_M_CD_CVTCNT << shift;
          if (errs & bm)
          {
-            printf ("%6" PRIx16 ":%5" PRIx16, 
+            printf ("%6" PRIx16 ":%5" PRIx32, 
                     rec->m_cd[icd].m_cvtcnt, 
                     rec->m_cd[icd].m_dcvtcnt&0x1ffff);
             errs &= ~bm;
@@ -444,9 +445,11 @@ void TpcStreamAssessor::report (Error_t filter) const
          if (errs & bm)
          {
             uint16_t stmerr = rec->m_cd[icd].m_stmerr;
-            if (stmerr & 0xff00) printf ("  %2.2" PRIx16, stmerr >>   8);
+            uint16_t stmerr1 = stmerr  & 0xff;
+            uint16_t stmerr2 = stmerr >>    8;
+            if (stmerr & 0xff00) printf ("  %2.2" PRIx16, stmerr2);
             else                 printf ("    ");
-            if (stmerr & 0x00ff) printf (":%2.2" PRIx16, stmerr & 0xff);
+            if (stmerr & 0x00ff) printf (":%2.2"  PRIx16, stmerr1);
             else                 printf (": .");
             errs &= ~bm;
          }
