@@ -40,6 +40,8 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.23 jjr Had to remove the inline from expandAdcs64x1_kernel. 
+                  The gcc optimizer optimized it right out of existence.
    2017.09.20 jjr Separated from WibFrame.cc
 
 \* ---------------------------------------------------------------------- */
@@ -245,9 +247,10 @@ static inline void expandAdcs16x1_kernel (int16_t *dst, uint64_t const *src)
   \param[in] src  The source address
                                                                           */
 /* ---------------------------------------------------------------------- */
-inline void expandAdcs64x1_kernel (int16_t        *dst, 
+static void expandAdcs64x1_kernel (int16_t        *dst, 
                                    uint64_t const *src)
 {
+   ///puts ("In expandAdcs64x1_kernel");
    expandAdcs16x1_kernel (dst+0*16, src+0*3);
    expandAdcs16x1_kernel (dst+1*16, src+1*3);
    expandAdcs16x1_kernel (dst+2*16, src+2*3);

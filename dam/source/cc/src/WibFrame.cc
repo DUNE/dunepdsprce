@@ -37,6 +37,8 @@
 
    DATE       WHO WHAT
    ---------- --- ---------------------------------------------------------
+   2018.10.23 jjr Had to remove the inline from expandAdcs64x1_kernel. 
+                  The gcc optimizer optimized it right out of existence.
    2017.10.05 jjr Added transposeAdcs128xN. These are methods that optimize
                   the transpose for an arbitrary number of frames.  
                   NOTE: Current implementation still limits this to
@@ -68,8 +70,8 @@ static inline void expandAdcs16_init_kernel () __attribute__ ((always_inline));
 static inline void expandAdcs16x1_kernel  (int16_t        *dst,
                                            uint64_t const *src) __attribute__ ((always_inline));
 
-static inline void expandAdcs64x1_kernel  (int16_t        *dst, 
-                                           uint64_t const *src) __attribute__ ((always_inline));
+static void expandAdcs64x1_kernel  (int16_t        *dst, 
+                                    uint64_t const *src);
 
 static inline void expandAdcs16x4_kernel  (int16_t        *dst, 
                                            uint64_t const *src) __attribute__ ((always_inline));

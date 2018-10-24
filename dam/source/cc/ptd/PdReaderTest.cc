@@ -513,10 +513,6 @@ static void announceTpcStream (TpcStreamUnpack const *tpcStream)
 static void process (Prms::Process const        &prms, 
                      TpcStreamUnpack const *tpcStream)
 {
-
-
-   int nchannels = tpcStream->getNChannels  ();
-
    TpcWindow::Window<TpcWindow::Type::Untrimmed> untrimmed (tpcStream);
    TpcWindow::Window<TpcWindow::Type::Trimmed>     trimmed (tpcStream);
 
@@ -548,12 +544,39 @@ static void process (Prms::Process const        &prms,
    // packed 12-bit ADCs to 16-bits and transposing the time
    // and channel order.
    // -------------------------------------------------------
-   int     adcCnt = nchannels * trimmed.m_nticks;
+   int  nchannels = tpcStream->getNChannels ();
+   int     nticks = tpcStream->getNTicks    ();
+   int     adcCnt = nchannels * nticks;
    int  adcNBytes = adcCnt    * sizeof (int16_t);
    int16_t  *adcs = reinterpret_cast <decltype (adcs)>(malloc (adcNBytes));
+   bool      okay = tpcStream->getMultiChannelData (adcs);
+   int      nerrs = 0;
+   int16_t    min = 0x7ff;
+   int16_t    max = -1;
 
+   for (int idx = 0; idx < adcCnt;  idx++)
+   {
+      int16_t val = adcs[idx];
+      //if (val == 0)
+      //{
+      //   printf ("Small adcs[%3d:%4d,%5d] = %4.4" PRIx16 "\n", 
+      //           idx/nticks, idx%nticks, idx, val);
+      //}
+      if (val < min) min = val;
+      if (val > max) max = val;
+      int tst = val & ~0xfff;
+      if (tst)
+      {
+         nerrs += 1;
+         printf ("Error: Adcs[%3d:%4d,%6d] = %4.4x\n", 
+                 idx/nticks, idx%nticks, idx, adcs[idx]);
+      }
+   }
 
-   bool okay = tpcStream->getMultiChannelData (adcs);
+   announceTpcStream (tpcStream);
+   printf ("Number of errors: %d out of %d channels of %d adcs total of %d"
+           " min = %4" PRIx16 " max = %4" PRIx16 "\n", 
+           nerrs, nchannels, nticks, adcCnt, min, max);
 
    if (!okay) 
    {
