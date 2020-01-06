@@ -1,7 +1,8 @@
-# proto-dune-dam-lib
-proto-DUNE Data Access Method (DAM) Library  
+# dunepdsprce
+ProtoDUNE-SP Data Access Library for the RCE data.
 
-This repository was forked on Januray 6, 2019 from slaclab/proto-dune-dam-lib.  DUNE intends to provide long-term support for this library in order to be able to read ProtoDUNE-SP data read out with the SLAC RCE hardware for the future.
+
+This repository was forked on Januray 6, 2019 from slaclab/proto-dune-dam-lib.  DUNE intends to provide long-term support for this library in order to be able to read ProtoDUNE-SP data read out with the SLAC RCE hardware for the future.  The original name stood for proto-DUNE Data Access Method (DAM) Library.
 
 Author: JJRussell  
 Email  : <russell@slac.stanford.edu>
