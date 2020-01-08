@@ -23,6 +23,10 @@ This truly an unfortunate state of affairs, since this is what is most useful.  
 - Fix the situation. Unfortunately this takes time to do and test that is not available now.
 - So I did the logical thing, drop back 15 yards and punt.
 
+Jan 2020 (DLA)
+
+The script dunebuild/buildMrb can be used to build this package and install in an mrb development area. First set up with mrb.
+
 ### Organization
 The code base is structured to recognize and address the different needs of three audiences and to shield these audiences from details needed only by the others. In order of the largest to smallest, these are
 
