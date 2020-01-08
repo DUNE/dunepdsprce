@@ -85,6 +85,8 @@
 #include "TpcPacket-Impl.hh"
 #include "TpcCompressed-Impl.hh"
 
+#include <string>
+#include <iostream>
 
 static inline void getTrimmed (pdd::access::TpcStream const *tpc,
                                int                          *beg,
@@ -471,9 +473,19 @@ inline static bool extractAdcs (int16_t                               *adcs,
                                 int                                  nticks)
 {
    using namespace pdd;
+   std::string myname = "extractAdcs: ";
+   bool dbg = false;
+
+   if ( dbg ) {
+     std::cout << myname << "===== nadcs=" << nadcs << ", nticks=" << nticks
+               << ", itick=" << itick << ", npkts=" << npkts
+               << ", output @ " << adcs << std::endl;
+   }
+   if ( nticks == 0 ) return false;      // dla jan 2020
 
    if (access::TpcTocPacketDsc::isWibFrame (pktDscs))
    {
+      if ( dbg ) std::cout << myname << "== Data format is WibFrame" << std::endl;
       int              o64    = access::TpcTocPacketDsc::getOffset64 (pktDscs);
       uint64_t const  *p64    = access::TpcPacketBody  ::getData (pkts) + o64;
 
@@ -485,27 +497,42 @@ inline static bool extractAdcs (int16_t                               *adcs,
    }
    else if (access::TpcTocPacketDsc::isCompressed (pktDscs))
    {
+      if ( dbg ) std::cout << myname << "== Data format is Compressed" << std::endl;
       pdd::record::TpcTocPacketDsc const *pktDsc = pktDscs;
 
+      unsigned int unticks = nticks;
       for (int ipkt = 0; ipkt < npkts; pktDsc++, ipkt++)
       {
+         if ( dbg ) std::cout << myname << "Packet " << ipkt << ": Output @ " << adcs << std::endl;
          int              o64 = access::TpcTocPacketDsc::getOffset64 (pktDsc);
          uint64_t const  *p64 = access::TpcPacketBody  ::getData (pkts) + o64;
          uint64_t         n64 = access::TpcTocPacketDsc::getLen64 (pktDsc);
 
          access::TpcCompressed cmp (p64, n64);
 
-         int nsamples;
-         if (itick)
-         {
+         unsigned int nsamples;
+         if ( itick ) {
             nsamples = cmp.decompress (adcs, nadcs, itick, nticks);
-            nticks  -= nsamples;
-            if (nticks > 0) itick = 0;
-         }
-         else
-         {
+         } else {
             nsamples = cmp.decompress (adcs, nadcs, nticks);
-            nticks  -= nsamples;
+         }
+
+         if ( dbg ) std::cout << myname << "  Nsamples: " << nsamples << std::endl;
+
+         // DLA jan2020: Exit if decompress returns too many ticks.
+         // See https://cdcvs.fnal.gov/redmine/issues/23811.
+         if ( nsamples > unticks ) {
+           std::cout << myname << "WARNING: Too many samples decoded." << std::endl;
+           //break;
+           return false;
+         }
+         
+         nticks  -= nsamples;
+
+         // DLA jan2020: I don't know why this is done but I carry it over from the old code.
+         if ( itick && nticks > 0 ) {
+           if ( dbg ) std::cout << myname << "  Setting itick = 0." << std::endl;
+           itick = 0;
          }
 
          if (nticks <= 0) break;

@@ -18,6 +18,11 @@
 #
 #     DATE   WHO WHAT
 # ---------- --- ----------------------------------------------------------- 
+# 2010.01.08 dla Set version 1.1.1.
+#                TpcTrimmed: Protect against invalid memeory access, fix off
+#                by one error in loop, return nticks=0 and log a warning
+#                message when data appears to be corrupt.
+#                
 # 2018.08.30 jjr Bump version of libprotodune-dam to 1.1.0. This version
 #                adds methods to
 #                   get all the relevant timestamps
@@ -197,7 +202,7 @@ libprotodune-dam_CCSRCFILES := Headers.cc             \
 libprotodune-dam__CCFLAGS   := -g
 libprotodune-dam__CXXFLAGS  := -g
 libprotodune-dam_ALIAS      := protodune-dam
-libprotodune-dam_VERSION    := 1.1.0
+libprotodune-dam_VERSION    := 1.1.1
 SHAREABLES                  += libprotodune-dam
 
 # ----------------------------------------------------------

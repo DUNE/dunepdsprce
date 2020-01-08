@@ -50,6 +50,8 @@
 
 #include "TpcStream-Impl.hh"
 #include "TpcCompressed-Impl.hh"
+#include <string>
+#include <iostream>
 
 namespace pdd    {
 namespace access {
@@ -160,6 +162,7 @@ inline TpcTrimmedRange::TpcTrimmedRange (pdd::access::TpcStream const &stream)
 {
    using namespace pdd;
    using namespace pdd::access;
+   const std::string myname = "TpcTrimmedRange::ctor: ";
 
    // -------------------------------------
    // Extract the timing window information
@@ -227,22 +230,32 @@ inline TpcTrimmedRange::TpcTrimmedRange (pdd::access::TpcStream const &stream)
 
    int       nTotFrames = npkts * nframes;
 
-
    // --------------------------------------------------------
    // Confirm or find the offset of the first and last samples
    // of the trimmed data
    // --------------------------------------------------------
-   m_beg.locate (begTs, firstTs, begIdx, wf, nframes, nTotFrames,  true);
-   m_end.locate (endTs, firstTs, endIdx, wf, nframes, nTotFrames, false);
+   bool failbeg = m_beg.locate (begTs, firstTs, begIdx, wf, nframes, nTotFrames,  true);
+   bool failend = m_end.locate (endTs, firstTs, endIdx, wf, nframes, nTotFrames, false);
 
-
-   // -------------------------------------------------------------
-   // Compute the number of frames within the trimmed data
-   // This will typically be, for example 6000 for a 3 msec window.
-   // But if there are dropped frames, this will be less.
-   // -------------------------------------------------------------
-   m_nticks = m_end.m_wibOff - m_beg.m_wibOff;
-
+   if ( failbeg || failend ) {
+     // -------------------------------------------------------------
+     // Jan 2020 (dla): If either search fails, then zero n_ticks so
+     // caller will know this is corrupt data.
+     // -------------------------------------------------------------
+     std::cout << myname << "WARNING: Skipping corrupt data: ";
+     if ( failbeg && failend ) std::cout << "first and last samples";
+     else if ( failbeg )       std::cout << "first sample";
+     else                      std::cout << "last sample";
+     std::cout << " not found." << std::endl;
+     m_nticks = 0;
+   } else {
+     // -------------------------------------------------------------
+     // Compute the number of frames within the trimmed data
+     // This will typically be, for example 6000 for a 3 msec window.
+     // But if there are dropped frames, this will be less.
+     // -------------------------------------------------------------
+     m_nticks = m_end.m_wibOff - m_beg.m_wibOff;
+   }
 
    printB  ("Begin",   m_beg);
    printB  ("End",     m_end);
@@ -299,6 +312,8 @@ inline uint32_t TpcTrimmedRange::Location::
                         int                               nTotFrames,
                         bool                                   begin)
 {
+   std::string myname = "TpcTrimmedRange::Location::locate: ";
+   int dbg = 1;
    auto pktNum = pdd::access::TpcRangesIndices::getPacket (pktIdx);
    auto pktOff = pdd::access::TpcRangesIndices::getOffset (pktIdx);
    int   wfOff = nframesPerPkt * pktNum + pktOff;
@@ -311,26 +326,37 @@ inline uint32_t TpcTrimmedRange::Location::
    // the calculation, which depends on the data not
    // having certain pathologies, on the RCE fails.
    // ------------------------------------------------
-   if (wfOff > nTotFrames)
+   if (wfOff >= nTotFrames)
    {
       // ------------
       // Try guessing
       // ------------
-      wfOff = (timestamp - firstTimestamp) / 25;
+      //  
+      int wfOffNew = (timestamp - firstTimestamp) / 25;
 
       // ---------------------------------------------
       // Hopeless if this occurs before the timestamp
       // of the first WIB frame in the untrimmed data.
       // This likely indicates a complete corruption.
       // ---------------------------------------------
-      if (wfOff < 0) 
-      {
+      if ( wfOffNew < 0 || wfOffNew >= nTotFrames ) {
+         if ( dbg >= 2 ) {
+           std::cout << myname << "WARNING: Skipping invalid frame index: " << wfOff << " --> "
+                     << wfOffNew << " >= " << nTotFrames << std::endl;
+         }
          m_wibOff = 0;
          m_pktNum = 0;
          m_pktOff = 0;
          m_wibTs  = 0;
          return -1;
       }
+
+      // Jan 2020 (dla): Write a warning so we can check if this ever happens.
+      if ( dbg >= 1 ) {
+        std::cout << myname << "WARNING: Guess fixed invalid frame index: " << wfOff << " --> "
+                  << wfOffNew << " / " << nTotFrames << std::endl;
+      }
+      wfOff = wfOffNew;
 
       pktNum = wfOff / nframesPerPkt;
       pktOff = wfOff % nframesPerPkt;
@@ -358,7 +384,6 @@ inline uint32_t TpcTrimmedRange::Location::
       m_wibTs  = firstTimestamp + wfOff * 25;
       return 0;
    }
-
 
    // ----------------------------------------
    // Get the timestamp at the predicted point

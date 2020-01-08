@@ -1,0 +1,22 @@
+TARFILE=$1
+DSTDIR=$2
+
+if [ -z "$DSTDIR" -o "$TARFILE" = "-h" ]; then
+  echo Usage: $0 TARFILE DSTDIR
+  exit 0
+fi
+
+if ! test -r $TARFILE; then
+  echo Input tar file not found: $TARFILE
+  exit 1
+fi
+
+if ! test -d $DSTDIR || ! test -r $DSTDIR; then
+  echo Destination is not a writeable directory: $DSTDIR
+  exit 1
+fi
+
+FULLTARFILE=$(readlink -f $TARFILE)
+cd $DSTDIR || exit 1
+echo Installing in $DSTDIR
+tar xf $TARFILE

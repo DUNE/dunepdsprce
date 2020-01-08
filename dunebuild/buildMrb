@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# buildMrb
+#
+# David Adams
+# January 2020
+#
+# Build and install in a mrb development area.
+
+# This should match the version set in
+# dam/source/cc/make/Makefile.
+VERSION=V1.1.1
+
+if [ -z "$MRB_PROJECT" ]; then
+  echo Please setup the MRB environment.
+  exit 1
+fi
+
+if [ $MRB_PROJECT != larsoft ]; then
+  echo MRB projects must be larsoft.
+  exit 1
+fi
+
+touch workspace
+rm -rf workspace
+mkdir workspace
+
+QUAL=$(echo $MRB_QUALS | sed 's/:.*//g')
+TYPE=$(echo $MRB_QUALS | sed 's/.*://g')
+
+export QUAL
+export COMPILERQUAL_LIST=$QUAL
+export SIMDQUALIFIER=gen
+export JJVERSION=$VERSION
+export BUILDTYPE=$TYPE
+export WORKSPACE=`pwd`/workspace
+export VERSIONSUFFIX=
+
+if ! ./build-dunepdsprce.sh .. $MRB_INSTALL; then
+  echo Build failed
+fi
