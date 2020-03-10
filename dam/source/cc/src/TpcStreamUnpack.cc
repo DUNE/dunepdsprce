@@ -481,7 +481,7 @@ inline static bool extractAdcs (int16_t                               *adcs,
                << ", itick=" << itick << ", npkts=" << npkts
                << ", output @ " << adcs << std::endl;
    }
-   if ( nticks == 0 ) return false;      // dla jan 2020
+   if ( nticks <= 0 ) return false;      // dla jan 2020  (trj mar 2020)
 
    if (access::TpcTocPacketDsc::isWibFrame (pktDscs))
    {

@@ -168,6 +168,14 @@ inline TpcTrimmedRange::TpcTrimmedRange (pdd::access::TpcStream const &stream)
    // Extract the timing window information
    // -------------------------------------
    record::TpcRanges const           *ranges = stream.getRanges     ();
+
+   if (!ranges)
+     {
+       std::cout << "Null ranges pointer in TpcTrimmedRange::TpcTrimmedRange.  Skipping data." << std::endl;
+       m_nticks = 0;
+       return;
+     }
+
    unsigned int                       bridge = TpcRanges::getBridge (ranges);
 
 

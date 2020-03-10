@@ -58,6 +58,7 @@
 #include "dam/records/TpcToc.hh"
 #include "dam/records/WibFrame.hh"
 
+#include <iostream>
 
 namespace pdd    {
 namespace access {
@@ -114,6 +115,11 @@ TpcToc::getBody   (pdd::record::TpcToc const *toc)
 TPCTOC_IMPL int 
 TpcToc::getNPacketDscs (pdd::record::TpcToc const *toc)
 {
+  if (!toc) 
+    {
+      std::cout << "TpcToc::getNPacketDscs: zero toc" << std::endl;
+      return 0;
+    }
    pdd::record::TpcTocHeader const *hdr = toc;
    return       TpcTocHeader::getNPacketDscs (hdr);
 }
