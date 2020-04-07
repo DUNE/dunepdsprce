@@ -208,6 +208,13 @@ inline TpcTrimmedRange::TpcTrimmedRange (pdd::access::TpcStream const &stream)
    // ---------------------------
    TpcToc           toc    (stream.getToc     ());
    TpcPacket        pktRec (stream.getPacket  ());
+   if (!pktRec.getRecord())
+     {
+       std::cout << "dunepdsprce: bad header in TpcTrimmedRange::TpcTrimmedRange" << std::endl;
+       m_nticks = 0;
+       return;
+     }
+
    TpcPacketBody    pktBdy (pktRec.getRecord  ());
    TpcTocPacketDsc  pktDsc (toc.getPacketDsc (0));
    int             npkts =  toc.getNPacketDscs ();
