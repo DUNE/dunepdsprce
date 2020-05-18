@@ -80,8 +80,15 @@ TpcFragment::TpcFragment (DataFragment const &df) :
    // does not exceed the allotted storage.
    // ----------------------------------------
    int nstreams                = hdr->getLeft () + 1;
+   if (nstreams>2)
+     {
+       std::cout << "RCE TPCFragment constructor nstreams " << nstreams << " > 2.  Skipping" << std::endl;
+       m_nstreams = 0;
+       return;
+     }
    int istream                 = 0; 
    pdd::Trailer const *trailer = df.getTrailer ();
+
 
    for (istream = 0; istream < nstreams; ++istream)
    {
