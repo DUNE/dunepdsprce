@@ -158,7 +158,7 @@ public:
 private:
    pdd::record::TpcPacketHeader const *m_header;
 
-} __attribute__ ((packed));
+};
 /* ---------------------------------------------------------------------- */
 
 
@@ -200,7 +200,7 @@ private:
    uint32_t                        m_bridge;
    uint32_t                        m_nbytes;
 
-} __attribute__ ((packed));
+};
 /* ---------------------------------------------------------------------- */
 
 
@@ -270,7 +270,7 @@ public:
 private:
    pdd::record::TpcPacket const *m_packet;
 
-} __attribute__ ((packed));
+};
 /* ---------------------------------------------------------------------- */
 }  /* Namespace:: access                                                  */
 }  /* Namespace:: pdd                                                     */

@@ -143,7 +143,7 @@ public:
 public:
    pdd::record::TpcTocHeader const *m_header;
 
-} __attribute__ ((packed));
+};
 /* ---------------------------------------------------------------------- */
 
 
@@ -191,7 +191,7 @@ public:
 
    private:
    pdd::record::TpcTocPacketDsc const *m_dsc;
-} __attribute__ ((packed));
+};
 /* ---------------------------------------------------------------------- */
 
 
@@ -245,7 +245,7 @@ private:
    uint32_t                     m_bridge; /*!< The bridge word            */
    uint32_t                     m_nbytes; /*!< Length in nybtes           */
 
-} __attribute__ ((packed));
+};
 /* ---------------------------------------------------------------------- */
 
 
@@ -309,7 +309,7 @@ public:
 private:
    pdd::record::TpcToc const *m_toc;
 
-} __attribute__ ((packed));
+};
 /* ---------------------------------------------------------------------- */
 /* END DEFINITIONS                                                        */
 /* ====================================================================== */
